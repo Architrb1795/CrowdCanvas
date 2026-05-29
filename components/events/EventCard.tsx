@@ -1,0 +1,131 @@
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import { Calendar, Tag, Globe, Lock, Image as ImageIcon, Users, ArrowRight } from 'lucide-react';
+import { EventWithProfile } from '@/lib/actions/events';
+
+interface EventCardProps {
+  event: EventWithProfile;
+}
+
+export default function EventCard({ event }: EventCardProps) {
+  // Safe date parsing
+  const formattedDate = event.event_date
+    ? new Date(event.event_date).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : 'Date TBD';
+
+  // Gradient Cover Generator based on Category or Name Hash to keep it premium and unique
+  const getGradientClass = (category: string | null) => {
+    const cat = (category || 'default').toLowerCase();
+    switch (cat) {
+      case 'workshop':
+      case 'academic':
+        return 'from-blue-600 to-indigo-600';
+      case 'cultural':
+      case 'festival':
+        return 'from-pink-500 to-rose-500';
+      case 'sports':
+      case 'outdoor':
+        return 'from-emerald-500 to-teal-500';
+      case 'social':
+      case 'networking':
+        return 'from-amber-500 to-orange-500';
+      default:
+        return 'from-indigo-500 via-purple-500 to-pink-500';
+    }
+  };
+
+  const gradient = getGradientClass(event.category);
+
+  // Deterministic mock calculations based on name to keep component pure
+  const nameLen = event.name.length;
+  const mockMediaCount = (nameLen % 21) + 4; // e.g. 4 to 24
+  const mockParticipantCount = ((nameLen * 3) % 95) + 18; // e.g. 18 to 112
+
+  return (
+    <article className="group relative flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden hover:-translate-y-1.5 hover:shadow-xl hover:border-slate-300 transition-all duration-300 h-full">
+      {/* Visual Cover Banner with Gradient Placeholder */}
+      <div className={`relative h-32 w-full bg-gradient-to-r ${gradient} flex items-end p-4 transition-all duration-300 group-hover:brightness-105`}>
+        {/* Abstract design elements to make it look premium */}
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_1px_1px,#fff_1px,transparent_1px)] bg-[size:16px_16px]"></div>
+        
+        {/* Glassmorphic Category Badge inside cover */}
+        {event.category && (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/25 rounded-full text-xs font-semibold text-white tracking-wide transition-colors">
+            <Tag className="w-3.5 h-3.5" />
+            {event.category}
+          </span>
+        )}
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col p-6">
+        {/* Visibility Badge & Date */}
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <span
+            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+              event.is_public
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                : 'bg-amber-50 text-amber-700 border-amber-100'
+            }`}
+          >
+            {event.is_public ? (
+              <>
+                <Globe className="w-3.5 h-3.5" />
+                Public
+              </>
+            ) : (
+              <>
+                <Lock className="w-3.5 h-3.5" />
+                Private
+              </>
+            )}
+          </span>
+
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+            {formattedDate}
+          </div>
+        </div>
+
+        {/* Title */}
+        <h3 className="text-xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-1 mb-2">
+          {event.name}
+        </h3>
+
+        {/* Description Preview */}
+        <p className="text-sm text-slate-600 line-clamp-2 mb-5 leading-relaxed">
+          {event.description || 'Join this exciting club event to connect, participate, and explore high quality content.'}
+        </p>
+
+        {/* Future-Ready Stat Metrics */}
+        <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-medium text-slate-500">
+          <div className="flex items-center gap-1">
+            <ImageIcon className="w-4 h-4 text-slate-400" />
+            <span>{mockMediaCount} Photos</span>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <Users className="w-4 h-4 text-slate-400" />
+            <span>{mockParticipantCount} Members</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Action footer wrapper */}
+      <Link 
+        href={`/media?eventId=${event.id}`}
+        className="w-full bg-slate-50 hover:bg-indigo-50 border-t border-slate-100/80 px-6 py-3.5 flex items-center justify-between text-sm font-semibold text-slate-700 hover:text-indigo-700 transition-all group/link"
+        aria-label={`View photos and media uploads for event: ${event.name}`}
+      >
+        <span>Browse Media Gallery</span>
+        <ArrowRight className="w-4 h-4 text-slate-400 group-hover/link:translate-x-1 group-hover/link:text-indigo-600 transition-all" />
+      </Link>
+    </article>
+  );
+}

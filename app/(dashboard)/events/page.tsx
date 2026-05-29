@@ -1,106 +1,121 @@
+import React from 'react';
 import { createClient } from '@/lib/supabase/server';
-import { Calendar, Users, ShieldAlert } from 'lucide-react';
-import Link from 'next/link';
-import { format } from 'date-fns';
+import { getEvents } from '@/lib/actions/events';
+import EventGallery from '@/components/events/EventGallery';
+import CreateEventTrigger from '@/components/events/CreateEventTrigger';
+import { CalendarRange, Globe, Shield, Sparkles } from 'lucide-react';
+
+export const revalidate = 0; // Disable server cache to ensure fresh data retrieval on every visit
 
 export default async function EventsPage() {
   const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from('events')
-    .select('*, profiles(full_name, role)')
-    .order('event_date', { ascending: true });
-
-  interface EventWithProfile {
-    id: string;
-    name: string;
-    description: string | null;
-    event_date: string | null;
-    category: string | null;
-    is_public: boolean;
-    created_by: string | null;
-    created_at: string;
-    profiles: {
-      full_name: string | null;
-      role: 'admin' | 'photographer' | 'member' | 'viewer';
-    } | null;
-  }
-
-  const events = data as unknown as EventWithProfile[] | null;
-
+  
+  // Resolve user authenticated session and database credentials
   const { data: { user } } = await supabase.auth.getUser();
   
   let isAdmin = false;
   if (user) {
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single() as unknown as { data: { role: string } | null };
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single() as unknown as { data: { role: string } | null };
+    
     isAdmin = profile?.role === 'admin';
   }
 
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="sm:flex sm:items-center sm:justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Events</h1>
-          <p className="mt-2 text-sm text-gray-700">
-            A list of all upcoming and past events. Private events are only visible to members.
-          </p>
-        </div>
-        <div className="mt-4 sm:mt-0">
-          {isAdmin && (
-            <button className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
-              Create New Event
-            </button>
-          )}
-        </div>
-      </div>
+  // Fetch events using server actions
+  const response = await getEvents();
+  const events = response.data || [];
+  const errorMsg = response.success ? undefined : (response.error || 'Failed to sync with Supabase.');
 
-      {error ? (
-        <div className="rounded-md bg-red-50 p-4 border border-red-100">
-          <p className="text-sm font-medium text-red-800">Error loading events: {error.message}</p>
+  // Calculate live database metrics for Stats Panel
+  const totalCount = events.length;
+  const publicCount = events.filter((e) => e.is_public).length;
+  const privateCount = totalCount - publicCount;
+
+  return (
+    <main className="min-h-screen bg-slate-50/50 pb-20">
+      {/* Visual Premium Hero Section */}
+      <section 
+        className="relative bg-slate-900 overflow-hidden py-16 sm:py-20 border-b border-slate-800"
+        aria-label="Events Dashboard Banner"
+      >
+        {/* Abstract futuristic grid layout overlay */}
+        <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full filter blur-3xl pointer-events-none"></div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="space-y-3 max-w-2xl">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/15 border border-indigo-500/30 rounded-full text-xs font-bold text-indigo-400 uppercase tracking-wider">
+                <Sparkles className="w-3.5 h-3.5" />
+                CrowdCanvas core
+              </span>
+              <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
+                Event Hub
+              </h1>
+              <p className="text-base sm:text-lg text-slate-300 leading-relaxed">
+                Discover campus gatherings, workshops, festivals, and activities. Upload, organize, and interact with live media archives.
+              </p>
+            </div>
+            
+            {/* Modal creator trigger only visible to Admin roles */}
+            <div className="flex-shrink-0">
+              <CreateEventTrigger isAdmin={isAdmin} />
+            </div>
+          </div>
         </div>
-      ) : events?.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-200">
-          <Calendar className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-semibold text-gray-900">No events found</h3>
-          <p className="mt-1 text-sm text-gray-500">Get started by creating a new event.</p>
+      </section>
+
+      {/* Dynamic Statistics Panel */}
+      <section 
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-20"
+        aria-label="Event Statistics"
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white/90 backdrop-blur-md p-5 rounded-2xl shadow-md border border-slate-200/65">
+          {/* Stat 1: Total */}
+          <div className="flex items-center gap-4 px-4 py-3.5 border-b sm:border-b-0 sm:border-r border-slate-100">
+            <div className="p-3 bg-indigo-50 rounded-xl">
+              <CalendarRange className="w-6 h-6 text-indigo-600" />
+            </div>
+            <div>
+              <div className="text-2xl font-black text-slate-900">{totalCount}</div>
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">Total Events</div>
+            </div>
+          </div>
+
+          {/* Stat 2: Public */}
+          <div className="flex items-center gap-4 px-4 py-3.5 border-b sm:border-b-0 sm:border-r border-slate-100">
+            <div className="p-3 bg-emerald-50 rounded-xl">
+              <Globe className="w-6 h-6 text-emerald-600" />
+            </div>
+            <div>
+              <div className="text-2xl font-black text-slate-900">{publicCount}</div>
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-wide text-emerald-700">Public Access</div>
+            </div>
+          </div>
+
+          {/* Stat 3: Private */}
+          <div className="flex items-center gap-4 px-4 py-3.5">
+            <div className="p-3 bg-amber-50 rounded-xl">
+              <Shield className="w-6 h-6 text-amber-600" />
+            </div>
+            <div>
+              <div className="text-2xl font-black text-slate-900">{privateCount}</div>
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-wide text-amber-700">Private restricted</div>
+            </div>
+          </div>
         </div>
-      ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {events?.map((event) => (
-            <Link 
-              href={`/media?eventId=${event.id}`} 
-              key={event.id}
-              className="flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
-            >
-              <div className="p-6 flex-1">
-                <div className="flex items-center justify-between mb-3">
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${event.is_public ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-                    {event.is_public ? 'Public' : 'Private'}
-                  </span>
-                  {!event.is_public && <ShieldAlert className="h-4 w-4 text-amber-600" />}
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{event.name}</h3>
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                  {event.description || 'No description provided.'}
-                </p>
-                <div className="flex items-center text-sm text-gray-500 mb-2">
-                  <Calendar className="mr-1.5 h-4 w-4 flex-shrink-0 text-gray-400" />
-                  {event.event_date ? format(new Date(event.event_date), 'MMM d, yyyy') : 'TBD'}
-                </div>
-                <div className="flex items-center text-sm text-gray-500">
-                  <Users className="mr-1.5 h-4 w-4 flex-shrink-0 text-gray-400" />
-                  Organized by {event.profiles?.full_name || 'Unknown'}
-                </div>
-              </div>
-              <div className="bg-gray-50 px-6 py-3 border-t border-gray-100">
-                <span className="text-sm font-medium text-indigo-600 hover:text-indigo-500">
-                  View Media &rarr;
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
+      </section>
+
+      {/* Discovery Dashboard & Gallery */}
+      <section 
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12"
+        aria-label="Event Listing"
+      >
+        <EventGallery initialEvents={events} errorMsg={errorMsg} />
+      </section>
+    </main>
   );
 }

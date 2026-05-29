@@ -6,9 +6,9 @@ import Navbar from '@/components/shared/Navbar';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Event & Media Platform',
+  title: 'CrowdCanvas | AI-Powered Event & Media Management',
   description:
-    'Centralized Event & Media Management Platform for clubs, photographers, and members.',
+    'The premium event and media management platform for clubs, photographers, and communities.',
 };
 
 export default function RootLayout({
@@ -17,10 +17,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" className="dark-theme bg-slate-950 text-slate-50">
+      <body className={`${inter.className} min-h-screen bg-slate-950 flex flex-col`}>
         <Navbar />
-        <main className="min-h-screen bg-slate-50">{children}</main>
+        <main className="flex-1 w-full">{children}</main>
       </body>
     </html>
   );

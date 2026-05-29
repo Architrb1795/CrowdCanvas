@@ -52,6 +52,23 @@ CREATE TABLE media (
     uploaded_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
     tags TEXT[],
     is_private BOOLEAN DEFAULT false,
+    
+    -- Cloudinary & Metadata Expansion
+    thumbnail_url TEXT,
+    cloudinary_public_id TEXT,
+    file_size BIGINT,
+    width INTEGER,
+    height INTEGER,
+    duration NUMERIC,
+    mime_type TEXT,
+    upload_status TEXT DEFAULT 'pending' CHECK (upload_status IN ('pending', 'processing', 'completed', 'failed')),
+    processing_status TEXT DEFAULT 'idle',
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    
+    -- Future AI Integration Hooks
+    ai_tags JSONB DEFAULT '[]'::jsonb,
+    faces_detected JSONB DEFAULT '[]'::jsonb,
+
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

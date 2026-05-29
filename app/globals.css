@@ -2,7 +2,7 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #020617; /* slate-950 */
 }
 
 @theme inline {
@@ -14,13 +14,20 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #020617; /* slate-950 */
+    --foreground: #f8fafc; /* slate-50 */
   }
+}
+
+/* Force dark mode for the premium SaaS look */
+.dark-theme {
+  --background: #020617; /* slate-950 */
+  --foreground: #f8fafc; /* slate-50 */
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  @apply antialiased selection:bg-indigo-500/30;
 }

@@ -31,6 +31,15 @@ export interface Database {
           avatar_url?: string | null
           created_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       events: {
         Row: {
@@ -63,6 +72,15 @@ export interface Database {
           created_by?: string | null
           created_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       media: {
         Row: {
@@ -73,6 +91,18 @@ export interface Database {
           uploaded_by: string | null
           tags: string[] | null
           is_private: boolean
+          thumbnail_url: string | null
+          cloudinary_public_id: string | null
+          file_size: number | null
+          width: number | null
+          height: number | null
+          duration: number | null
+          mime_type: string | null
+          upload_status: 'pending' | 'processing' | 'completed' | 'failed' | null
+          processing_status: string | null
+          updated_at: string | null
+          ai_tags: Json | null
+          faces_detected: Json | null
           created_at: string
         }
         Insert: {
@@ -83,6 +113,18 @@ export interface Database {
           uploaded_by?: string | null
           tags?: string[] | null
           is_private?: boolean
+          thumbnail_url?: string | null
+          cloudinary_public_id?: string | null
+          file_size?: number | null
+          width?: number | null
+          height?: number | null
+          duration?: number | null
+          mime_type?: string | null
+          upload_status?: 'pending' | 'processing' | 'completed' | 'failed' | null
+          processing_status?: string | null
+          updated_at?: string | null
+          ai_tags?: Json | null
+          faces_detected?: Json | null
           created_at?: string
         }
         Update: {
@@ -93,8 +135,36 @@ export interface Database {
           uploaded_by?: string | null
           tags?: string[] | null
           is_private?: boolean
+          thumbnail_url?: string | null
+          cloudinary_public_id?: string | null
+          file_size?: number | null
+          width?: number | null
+          height?: number | null
+          duration?: number | null
+          mime_type?: string | null
+          upload_status?: 'pending' | 'processing' | 'completed' | 'failed' | null
+          processing_status?: string | null
+          updated_at?: string | null
+          ai_tags?: Json | null
+          faces_detected?: Json | null
           created_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "media_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       likes: {
         Row: {
@@ -115,6 +185,22 @@ export interface Database {
           media_id?: string | null
           created_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "likes_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "media"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "likes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       comments: {
         Row: {
@@ -138,6 +224,22 @@ export interface Database {
           content?: string
           created_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "comments_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "media"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {
@@ -148,6 +250,9 @@ export interface Database {
     }
     Enums: {
       user_role: 'admin' | 'photographer' | 'member' | 'viewer'
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }

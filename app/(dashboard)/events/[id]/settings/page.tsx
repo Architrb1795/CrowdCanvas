@@ -3,8 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import EventSettingsClient from '@/components/events/EventSettingsClient';
 import { getEventMembers } from '@/lib/actions/event_members';
+import { getPendingRequests } from '@/lib/actions/role_requests';
 
-export default async function EventSettingsPage({ params }: { params: { id: string } }) {
+export default async function EventSettingsPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const supabase = await createClient();
   
   // Verify auth
@@ -18,7 +20,7 @@ export default async function EventSettingsPage({ params }: { params: { id: stri
   // Verify event exists and fetch details
   const { data: event, error: eventError } = await supabase
     .from('events')
-    .select('id, name')
+    .select('*')
     .eq('id', eventId)
     .single();
 
@@ -53,12 +55,17 @@ export default async function EventSettingsPage({ params }: { params: { id: stri
   const membersResponse = await getEventMembers(eventId);
   const initialMembers = membersResponse.success && membersResponse.data ? membersResponse.data : [];
 
+  // Fetch pending role requests
+  const requestsResponse = await getPendingRequests(eventId);
+  const initialRequests = requestsResponse.success && requestsResponse.data ? requestsResponse.data : [];
+
   return (
     <main className="min-h-screen pt-24 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
       <EventSettingsClient 
         eventId={eventId} 
-        eventName={event.name}
+        event={event}
         initialMembers={initialMembers}
+        initialRequests={initialRequests}
         currentUserRole={memberData.role as 'owner' | 'admin'}
         currentUserId={user.id}
       />

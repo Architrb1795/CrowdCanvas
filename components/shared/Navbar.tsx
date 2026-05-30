@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Menu, X, User, Bell, Sparkles, Image as ImageIcon, Calendar, UploadCloud, Info } from 'lucide-react';
+import { Menu, X, User, Bell, Sparkles, Image as ImageIcon, Calendar, UploadCloud, Info, Settings } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { type User as SupabaseUser } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/Button';
@@ -76,22 +76,60 @@ const Navbar = () => {
           {/* Desktop User Action */}
           <div className="hidden md:flex items-center gap-3">
             {user ? (
-              <>
+              <div className="flex items-center gap-3">
                 <button className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-full transition-colors relative">
                   <Bell className="w-5 h-5" />
                   <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-500 rounded-full border border-slate-950"></span>
                 </button>
                 <div className="h-6 w-px bg-slate-800 mx-1"></div>
-                <Link href="/profile">
-                  <Button variant="ghost" className="gap-2">
-                    <User className="w-4 h-4" />
-                    <span className="hidden lg:inline">Profile</span>
-                  </Button>
-                </Link>
-                <Button variant="ghost" onClick={() => supabase.auth.signOut()} className="text-slate-400 hover:text-red-400 px-3">
-                  <span className="hidden lg:inline">Sign Out</span>
-                </Button>
-              </>
+                
+                {/* Custom User Dropdown */}
+                <div className="relative group">
+                  <button className="flex items-center gap-2 p-1 pl-2 pr-3 bg-slate-900/50 hover:bg-slate-800 border border-white/5 rounded-full transition-colors focus:outline-none">
+                    <div className="w-7 h-7 rounded-full bg-indigo-500/20 flex items-center justify-center overflow-hidden border border-indigo-500/30">
+                      {user.user_metadata?.avatar_url ? (
+                        <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-4 h-4 text-indigo-400" />
+                      )}
+                    </div>
+                    <span className="text-sm font-medium text-slate-300">
+                      {user.user_metadata?.full_name?.split(' ')[0] || 'Account'}
+                    </span>
+                  </button>
+                  
+                  {/* Dropdown Menu */}
+                  <div className="absolute right-0 top-full mt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0">
+                    <div className="p-2 bg-slate-950 border border-slate-800 rounded-xl shadow-xl shadow-black/50 flex flex-col gap-1">
+                      <div className="px-3 py-2 border-b border-white/5 mb-1">
+                        <div className="text-sm font-bold text-white truncate">{user.user_metadata?.full_name || 'User'}</div>
+                        <div className="text-xs text-slate-500 truncate">{user.email}</div>
+                      </div>
+                      
+                      <Link href="/profile" className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                        <User className="w-4 h-4 text-indigo-400" /> Profile Dashboard
+                      </Link>
+                      
+                      <Link href="/profile" className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                        <ImageIcon className="w-4 h-4 text-emerald-400" /> My Uploads
+                      </Link>
+
+                      <Link href="/profile" className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                        <Settings className="w-4 h-4 text-slate-400" /> Account Settings
+                      </Link>
+                      
+                      <div className="h-px bg-white/5 my-1"></div>
+                      
+                      <button 
+                        onClick={() => supabase.auth.signOut()} 
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors text-left w-full"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             ) : (
               <>
                 <Link href="/login">

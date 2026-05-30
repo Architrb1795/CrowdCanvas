@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
@@ -9,6 +10,8 @@ export interface EventWithProfile {
   description: string | null;
   event_date: string | null;
   category: string | null;
+  location: string | null;
+  cover_url: string | null;
   is_public: boolean;
   created_by: string | null;
   created_at: string;
@@ -18,6 +21,7 @@ export interface EventWithProfile {
   } | null;
   mediaCount?: number;
   memberCount?: number;
+  currentUserRole?: 'owner' | 'admin' | 'uploader' | 'viewer' | null;
 }
 
 export interface ServerActionResponse<T> {
@@ -34,10 +38,13 @@ export async function getEvents(): Promise<ServerActionResponse<EventWithProfile
   try {
     const supabase = await createClient();
     
+    // Get current user to determine role
+    const { data: { user } } = await supabase.auth.getUser();
+
     // Also fetch the media and member counts
     const { data, error } = await supabase
       .from('events')
-      .select('*, profiles(full_name, role), media(count), event_members(count)')
+      .select('*, profiles(full_name, role), media(count), event_members(user_id, role)')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -48,14 +55,27 @@ export async function getEvents(): Promise<ServerActionResponse<EventWithProfile
       };
     }
 
-    // Map over the data to properly extract counts
+    // Map over the data to properly extract counts and current user role
     const formattedEvents = (data as any[]).map((evt) => {
       const mCount = evt.media && evt.media.length > 0 ? evt.media[0].count : 0;
-      const memCount = evt.event_members && evt.event_members.length > 0 ? evt.event_members[0].count : 0;
+      
+      const allMembers = evt.event_members || [];
+      const memCount = allMembers.length;
+      
+      let currentUserRole = null;
+      if (user) {
+        const userMember = allMembers.find((m: any) => m.user_id === user.id);
+        if (userMember) {
+          currentUserRole = userMember.role;
+        }
+      }
+
       return {
         ...evt,
         mediaCount: mCount,
         memberCount: memCount,
+        currentUserRole,
+        event_members: undefined // clean up payload
       } as EventWithProfile;
     });
 
@@ -90,23 +110,15 @@ export async function createEvent(
       return { success: false, error: 'Unauthorized. Please sign in to create events.' };
     }
 
-    // Check permissions - only admin can create events
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single() as unknown as { data: { role: string } | null; error: { message: string } | null };
-
-    if (profileError || !profile || profile.role !== 'admin') {
-      return { success: false, error: 'Unauthorized. Only administrators can create events.' };
-    }
-
     // Destructure and validate input
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
     const event_date = formData.get('event_date') as string;
     const category = formData.get('category') as string;
+    const location = formData.get('location') as string;
+    const cover_url = formData.get('cover_url') as string;
     const is_public = formData.get('is_public') === 'true';
+    const initial_members_json = formData.get('initial_members') as string;
 
     if (!name || name.trim() === '') {
       return { success: false, error: 'Event name is required.' };
@@ -117,12 +129,13 @@ export async function createEvent(
     }
 
     // Insert new event
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: newEvent, error: insertError } = await (supabase.from('events') as any).insert({
       name: name.trim(),
       description: description ? description.trim() : null,
       event_date,
       category: category ? category : null,
+      location: location ? location.trim() : null,
+      cover_url: cover_url ? cover_url.trim() : null,
       is_public,
       created_by: user.id,
     }).select().single() as unknown as { data: EventWithProfile | null; error: { message: string } | null };
@@ -132,6 +145,39 @@ export async function createEvent(
         success: false,
         error: insertError?.message || 'Failed to record new event.',
       };
+    }
+
+    // EXPLICIT APPLICATION LEVEL OWNERSHIP INSERT
+    // Do not rely solely on postgres triggers. This ensures ownership assignment is deterministic.
+    const { error: memberError } = await supabase.from('event_members').insert({
+      event_id: newEvent.id,
+      user_id: user.id,
+      role: 'owner'
+    });
+
+    if (memberError) {
+      // Even if trigger fired, we want to be absolutely sure. 
+      // If it fails due to unique constraint, that means trigger worked, which is fine.
+      if (!memberError.message.includes('duplicate key value')) {
+        console.error('Failed to insert owner explicitly:', memberError);
+      }
+    }
+
+    if (!is_public && initial_members_json) {
+      try {
+        const memberIds = JSON.parse(initial_members_json) as string[];
+        if (memberIds.length > 0) {
+          const membersToInsert = memberIds.map(id => ({
+            event_id: newEvent.id,
+            user_id: id,
+            role: 'viewer'
+          }));
+          const { error: inviteError } = await supabase.from('event_members').insert(membersToInsert);
+          if (inviteError) console.error('Failed to insert initial members:', inviteError);
+        }
+      } catch (e) {
+        console.error('Failed to parse or insert initial members:', e);
+      }
     }
 
     // Revalidate paths to sync data across all users instantly
@@ -147,5 +193,70 @@ export async function createEvent(
       success: false,
       error: message,
     };
+  }
+}
+
+export async function updateEventDetails(
+  eventId: string,
+  formData: FormData
+): Promise<ServerActionResponse<void>> {
+  try {
+    const supabase = await createClient();
+    
+    // Check current authenticated session
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: 'Unauthorized. Please sign in to manage events.' };
+    }
+
+    // Check permissions - must be owner or admin
+    const { data: memberData } = await supabase
+      .from('event_members')
+      .select('role')
+      .eq('event_id', eventId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (!memberData || (memberData.role !== 'owner' && memberData.role !== 'admin')) {
+      return { success: false, error: 'Unauthorized. Only event owners and admins can update event details.' };
+    }
+
+    const name = formData.get('name') as string;
+    const description = formData.get('description') as string;
+    const event_date = formData.get('event_date') as string;
+    const category = formData.get('category') as string;
+    const location = formData.get('location') as string;
+    const cover_url = formData.get('cover_url') as string;
+    const is_public = formData.get('is_public') === 'true';
+
+    if (!name || name.trim() === '') {
+      return { success: false, error: 'Event name is required.' };
+    }
+    if (!event_date) {
+      return { success: false, error: 'Event date is required.' };
+    }
+
+    const { error: updateError } = await supabase
+      .from('events')
+      .update({
+        name: name.trim(),
+        description: description ? description.trim() : null,
+        event_date,
+        category: category ? category : null,
+        location: location ? location.trim() : null,
+        cover_url: cover_url ? cover_url.trim() : null,
+        is_public,
+      })
+      .eq('id', eventId);
+
+    if (updateError) throw updateError;
+
+    revalidatePath(`/events/${eventId}/settings`);
+    revalidatePath('/events');
+
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'An error occurred during event update.';
+    return { success: false, error: message };
   }
 }

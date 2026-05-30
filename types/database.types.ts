@@ -16,6 +16,7 @@ export interface Database {
           full_name: string | null
           avatar_url: string | null
           email: string | null
+          bio: string | null
           created_at: string
         }
         Insert: {
@@ -24,6 +25,7 @@ export interface Database {
           full_name?: string | null
           avatar_url?: string | null
           email?: string | null
+          bio?: string | null
           created_at?: string
         }
         Update: {
@@ -32,6 +34,7 @@ export interface Database {
           full_name?: string | null
           avatar_url?: string | null
           email?: string | null
+          bio?: string | null
           created_at?: string
         }
         Relationships: [
@@ -90,6 +93,8 @@ export interface Database {
           description: string | null
           event_date: string | null
           category: string | null
+          location: string | null
+          cover_url: string | null
           is_public: boolean
           created_by: string | null
           created_at: string
@@ -100,6 +105,8 @@ export interface Database {
           description?: string | null
           event_date?: string | null
           category?: string | null
+          location?: string | null
+          cover_url?: string | null
           is_public?: boolean
           created_by?: string | null
           created_at?: string
@@ -110,6 +117,8 @@ export interface Database {
           description?: string | null
           event_date?: string | null
           category?: string | null
+          location?: string | null
+          cover_url?: string | null
           is_public?: boolean
           created_by?: string | null
           created_at?: string
@@ -118,6 +127,48 @@ export interface Database {
           {
             foreignKeyName: "events_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      event_role_requests: {
+        Row: {
+          id: string
+          event_id: string | null
+          user_id: string | null
+          requested_role: 'owner' | 'admin' | 'uploader' | 'viewer' | null
+          status: 'pending' | 'approved' | 'rejected' | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          event_id?: string | null
+          user_id?: string | null
+          requested_role?: 'owner' | 'admin' | 'uploader' | 'viewer' | null
+          status?: 'pending' | 'approved' | 'rejected' | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          event_id?: string | null
+          user_id?: string | null
+          requested_role?: 'owner' | 'admin' | 'uploader' | 'viewer' | null
+          status?: 'pending' | 'approved' | 'rejected' | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_role_requests_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_role_requests_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

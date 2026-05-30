@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
@@ -64,19 +65,22 @@ export async function getEventMembers(eventId: string): Promise<ServerActionResp
   }
 }
 
-export async function searchUsers(query: string, eventId: string): Promise<ServerActionResponse<ProfileSearch[]>> {
+export async function searchUsers(query: string, eventId?: string): Promise<ServerActionResponse<ProfileSearch[]>> {
   if (!query || query.length < 2) return { success: true, data: [] };
   
   try {
     const supabase = await createClient();
-    
-    // First, find users already in the event to exclude them
-    const { data: existingMembers } = await supabase
-      .from('event_members')
-      .select('user_id')
-      .eq('event_id', eventId);
-      
-    const existingIds = existingMembers?.map(m => m.user_id) || [];
+    let existingIds: string[] = [];
+
+    if (eventId) {
+      // Find users already in the event to exclude them
+      const { data: existingMembers } = await supabase
+        .from('event_members')
+        .select('user_id')
+        .eq('event_id', eventId);
+        
+      existingIds = (existingMembers?.map(m => m.user_id).filter(Boolean) as string[]) || [];
+    }
 
     // Search profiles
     let queryBuilder = supabase

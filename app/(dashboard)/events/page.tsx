@@ -11,18 +11,8 @@ export default async function EventsPage() {
   const supabase = await createClient();
   
   // Resolve user authenticated session and database credentials
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  let isAdmin = false;
-  if (user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single() as unknown as { data: { role: string } | null };
-    
-    isAdmin = profile?.role === 'admin';
-  }
+  await supabase.auth.getUser();
+  // Removed legacy admin check, all authenticated users can now create events.
 
   // Fetch events using server actions
   const response = await getEvents();
@@ -60,9 +50,9 @@ export default async function EventsPage() {
               </p>
             </div>
             
-            {/* Modal creator trigger only visible to Admin roles */}
+            {/* Modal creator trigger visible to all authenticated users */}
             <div className="flex-shrink-0">
-              <CreateEventTrigger isAdmin={isAdmin} />
+              <CreateEventTrigger />
             </div>
           </div>
         </div>

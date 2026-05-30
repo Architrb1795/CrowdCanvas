@@ -45,6 +45,8 @@ CREATE TABLE events (
     description TEXT,
     event_date TIMESTAMP WITH TIME ZONE,
     category TEXT,
+    location TEXT,
+    cover_url TEXT,
     is_public BOOLEAN DEFAULT true,
     created_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -61,6 +63,17 @@ CREATE TABLE event_members (
 
 CREATE INDEX idx_event_members_event_id ON event_members(event_id);
 CREATE INDEX idx_event_members_user_id ON event_members(user_id);
+
+CREATE TABLE event_role_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_id UUID REFERENCES events(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    requested_role event_member_role DEFAULT 'uploader',
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(event_id, user_id, requested_role)
+);
+CREATE INDEX idx_event_role_requests_event_id ON event_role_requests(event_id);
 
 CREATE OR REPLACE FUNCTION public.handle_new_event()
 RETURNS trigger AS $$
@@ -136,6 +149,7 @@ CREATE TABLE comments (
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE event_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE event_role_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE media ENABLE ROW LEVEL SECURITY;
 ALTER TABLE likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
@@ -150,7 +164,6 @@ CREATE POLICY "Users can update their own profile" ON profiles FOR UPDATE USING 
 DROP POLICY IF EXISTS "Public events are viewable by everyone" ON events;
 DROP POLICY IF EXISTS "Admin and members can view private events" ON events;
 DROP POLICY IF EXISTS "Event members can view private events" ON events;
-DROP POLICY IF EXISTS "Only admins can insert events" ON events;
 DROP POLICY IF EXISTS "Authenticated users can insert events" ON events;
 DROP POLICY IF EXISTS "Only admins can update events" ON events;
 DROP POLICY IF EXISTS "Event owners and admins can update events" ON events;
@@ -161,9 +174,9 @@ CREATE POLICY "Public events are viewable by everyone" ON events FOR SELECT USIN
 CREATE POLICY "Event members can view private events" ON events FOR SELECT USING (
     is_public = false AND EXISTS (SELECT 1 FROM event_members WHERE event_members.event_id = id AND event_members.user_id = auth.uid())
 );
--- Global Admins can still create events (or we can expand this later)
-CREATE POLICY "Only admins can insert events" ON events FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'admin')
+-- All authenticated users can create events
+CREATE POLICY "Authenticated users can insert events" ON events FOR INSERT WITH CHECK (
+    auth.role() = 'authenticated'
 );
 CREATE POLICY "Event owners and admins can update events" ON events FOR UPDATE USING (
     EXISTS (SELECT 1 FROM event_members WHERE event_members.event_id = id AND event_members.user_id = auth.uid() AND event_members.role IN ('owner', 'admin'))
@@ -187,6 +200,20 @@ CREATE POLICY "Event owners and admins can update members" ON event_members FOR 
 );
 CREATE POLICY "Event owners and admins can delete members" ON event_members FOR DELETE USING (
     EXISTS (SELECT 1 FROM event_members em WHERE em.event_id = event_id AND em.user_id = auth.uid() AND em.role IN ('owner', 'admin'))
+);
+
+-- Event Role Requests
+CREATE POLICY "Users can insert their own requests" ON event_role_requests FOR INSERT WITH CHECK (
+    auth.uid() = user_id
+);
+CREATE POLICY "Users can view their own requests" ON event_role_requests FOR SELECT USING (
+    auth.uid() = user_id
+);
+CREATE POLICY "Event owners and admins can view requests" ON event_role_requests FOR SELECT USING (
+    EXISTS (SELECT 1 FROM event_members em WHERE em.event_id = event_role_requests.event_id AND em.user_id = auth.uid() AND em.role IN ('owner', 'admin'))
+);
+CREATE POLICY "Event owners and admins can update requests" ON event_role_requests FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM event_members em WHERE em.event_id = event_role_requests.event_id AND em.user_id = auth.uid() AND em.role IN ('owner', 'admin'))
 );
 
 -- Media
@@ -228,3 +255,4 @@ CREATE POLICY "Users can delete their own comments" ON comments FOR DELETE USING
 ALTER PUBLICATION supabase_realtime ADD TABLE likes;
 ALTER PUBLICATION supabase_realtime ADD TABLE comments;
 ALTER PUBLICATION supabase_realtime ADD TABLE event_members;
+ALTER PUBLICATION supabase_realtime ADD TABLE event_role_requests;

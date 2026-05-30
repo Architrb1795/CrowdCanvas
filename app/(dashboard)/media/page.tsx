@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { Image as ImageIcon, Video, UploadCloud } from 'lucide-react';
 import Link from 'next/link';
+import RequestAccessButton from '@/components/events/RequestAccessButton';
 
 // NOTE: In Next.js 14, page props searchParams are a standard synchronous object or Promise depending on config, but typing them standard is fine.
 export default async function MediaPage(
@@ -44,9 +45,38 @@ export default async function MediaPage(
   const { data: { user } } = await supabase.auth.getUser();
   
   let canUpload = false;
+  let canManageEvent = false;
+  let hasPendingRequest = false;
+  
   if (user) {
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single() as unknown as { data: { role: string } | null };
-    canUpload = profile?.role === 'admin' || profile?.role === 'photographer';
+    if (eventId) {
+      const { data: memberData } = await supabase
+        .from('event_members')
+        .select('role')
+        .eq('event_id', eventId)
+        .eq('user_id', user.id)
+        .single();
+        
+      if (memberData && ['owner', 'admin', 'uploader'].includes(memberData.role)) {
+        canUpload = true;
+        if (memberData.role === 'owner' || memberData.role === 'admin') {
+          canManageEvent = true;
+        }
+      } else {
+        const { data: pending } = await supabase
+          .from('event_role_requests')
+          .select('id')
+          .eq('event_id', eventId)
+          .eq('user_id', user.id)
+          .eq('status', 'pending')
+          .single();
+        hasPendingRequest = !!pending;
+      }
+    } else {
+      // Global fallback if no event is selected
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single() as unknown as { data: { role: string } | null };
+      canUpload = profile?.role === 'admin' || profile?.role === 'photographer';
+    }
   }
 
   return (
@@ -66,12 +96,19 @@ export default async function MediaPage(
                &larr; Back to Events
              </Link>
            )}
-          {canUpload && (
+          {canManageEvent && eventId && (
+            <Link href={`/events/${eventId}/settings`} className="inline-flex items-center justify-center rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-700">
+              Manage Event
+            </Link>
+          )}
+          {canUpload ? (
             <button className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
               <UploadCloud className="w-4 h-4 mr-2" />
               Upload Media
             </button>
-          )}
+          ) : eventId ? (
+            <RequestAccessButton eventId={eventId} hasPending={hasPendingRequest} />
+          ) : null}
         </div>
       </div>
 

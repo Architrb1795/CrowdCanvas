@@ -4,14 +4,8 @@ import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import CreateEventModal from './CreateEventModal';
 
-interface CreateEventTriggerProps {
-  isAdmin: boolean;
-}
-
-export default function CreateEventTrigger({ isAdmin }: CreateEventTriggerProps) {
+export default function CreateEventTrigger() {
   const [isOpen, setIsOpen] = useState(false);
-
-  if (!isAdmin) return null;
 
   return (
     <>

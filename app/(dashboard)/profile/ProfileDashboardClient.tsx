@@ -7,10 +7,9 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
-import { User, Image as ImageIcon, Calendar, Settings, ShieldAlert, Trash2, Download, LogOut, CheckCircle } from 'lucide-react';
+import { User, Image as ImageIcon, Calendar, Settings, CheckCircle, Download, Trash2, ShieldAlert } from 'lucide-react';
 import AvatarUpload from '@/components/profile/AvatarUpload';
 import FutureHooks from '@/components/profile/FutureHooks';
-import { createClient } from '@/lib/supabase/client';
 import Image from 'next/image';
 
 interface ProfileDashboardClientProps {

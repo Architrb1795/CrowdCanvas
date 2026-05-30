@@ -1,16 +1,19 @@
 import { createClient } from '@/lib/supabase/server';
-import { Image as ImageIcon, Video, UploadCloud } from 'lucide-react';
+import { Image as ImageIcon, UploadCloud } from 'lucide-react';
 import Link from 'next/link';
 import RequestAccessButton from '@/components/events/RequestAccessButton';
+import MediaGalleryGrid from '@/components/media/MediaGalleryGrid';
+import AdminDiagnosticsPanel from '@/components/media/AdminDiagnosticsPanel';
 
 // NOTE: In Next.js 14, page props searchParams are a standard synchronous object or Promise depending on config, but typing them standard is fine.
 export default async function MediaPage(
   props: {
-    searchParams?: Promise<{ eventId?: string }>;
+    searchParams?: Promise<{ eventId?: string; debug?: string }>;
   }
 ) {
   const searchParams = await props.searchParams;
   const eventId = searchParams?.eventId;
+  const isDebug = searchParams?.debug === 'true';
   const supabase = await createClient();
 
   let query = supabase
@@ -23,6 +26,12 @@ export default async function MediaPage(
   }
 
   const { data, error } = await query;
+  
+  let eventName = 'All Media';
+  if (eventId) {
+    const { data: evt } = await supabase.from('events').select('name').eq('id', eventId).single();
+    if (evt) eventName = `Media for ${evt.name}`;
+  }
 
   interface MediaWithRelations {
     id: string;
@@ -80,19 +89,19 @@ export default async function MediaPage(
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div className="min-h-screen pt-24 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
       <div className="sm:flex sm:items-center sm:justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            {eventId && mediaItems?.[0]?.events ? `Media for ${mediaItems[0].events.name}` : 'All Media'}
+          <h1 className="text-3xl font-bold text-white">
+            {eventName}
           </h1>
-          <p className="mt-2 text-sm text-gray-700">
+          <p className="mt-2 text-sm text-slate-400">
             Browse through all available photos and videos.
           </p>
         </div>
         <div className="mt-4 sm:mt-0 flex gap-4">
            {eventId && (
-             <Link href="/events" className="inline-flex items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm border border-gray-300 hover:bg-gray-50">
+             <Link href="/events" className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-slate-300 shadow-sm border border-white/10 hover:bg-slate-800">
                &larr; Back to Events
              </Link>
            )}
@@ -102,10 +111,10 @@ export default async function MediaPage(
             </Link>
           )}
           {canUpload ? (
-            <button className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
+            <Link href="/upload" className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
               <UploadCloud className="w-4 h-4 mr-2" />
               Upload Media
-            </button>
+            </Link>
           ) : eventId ? (
             <RequestAccessButton eventId={eventId} hasPending={hasPendingRequest} />
           ) : null}
@@ -117,48 +126,21 @@ export default async function MediaPage(
           <p className="text-sm font-medium text-red-800">Error loading media: {error.message}</p>
         </div>
       ) : mediaItems?.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-200">
-          <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-semibold text-gray-900">No media found</h3>
-          <p className="mt-1 text-sm text-gray-500">
+        <div className="text-center py-12 bg-slate-900/50 rounded-xl shadow-sm border border-white/5">
+          <ImageIcon className="mx-auto h-12 w-12 text-slate-500" />
+          <h3 className="mt-2 text-sm font-semibold text-white">No media found</h3>
+          <p className="mt-1 text-sm text-slate-400">
             {canUpload ? 'Be the first to upload photos or videos.' : 'Check back later for updates.'}
           </p>
         </div>
       ) : (
-        <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6 space-y-6">
-          {mediaItems?.map((media) => (
-            <div key={media.id} className="break-inside-avoid relative group rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-gray-200 bg-gray-100">
-              {media.media_type === 'video' ? (
-                <div className="aspect-video bg-gray-900 flex items-center justify-center">
-                   <Video className="h-8 w-8 text-white opacity-50" />
-                </div>
-              ) : (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img 
-                  src={media.file_url} 
-                  alt="Event media" 
-                  className="w-full h-auto object-cover"
-                  loading="lazy"
-                />
-              )}
-              
-              {/* Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
-                 <p className="text-white text-sm font-medium">
-                   Uploaded by {media.profiles?.full_name || 'Unknown'}
-                 </p>
-                 {media.tags && media.tags.length > 0 && (
-                   <div className="flex gap-2 mt-2 flex-wrap">
-                     {media.tags.map((tag: string) => (
-                       <span key={tag} className="px-2 py-0.5 bg-white/20 backdrop-blur-md rounded-md text-xs text-white">
-                         {tag}
-                       </span>
-                     ))}
-                   </div>
-                 )}
-              </div>
-            </div>
-          ))}
+        <div>
+          {isDebug && <AdminDiagnosticsPanel mediaItems={mediaItems || []} />}
+          <MediaGalleryGrid 
+            mediaItems={mediaItems || []} 
+            canManageEvent={canManageEvent}
+            currentUserId={user?.id}
+          />
         </div>
       )}
     </div>

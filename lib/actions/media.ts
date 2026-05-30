@@ -29,6 +29,19 @@ export async function syncMediaToDatabase(
       return { success: false, error: 'Unauthorized. Please sign in to upload media.' };
     }
 
+    // Authenticate the uploader's event permissions
+    const { data: memberData } = await supabase
+      .from('event_members')
+      .select('role')
+      .eq('event_id', eventId)
+      .eq('user_id', user.id)
+      .in('role', ['owner', 'admin', 'uploader'])
+      .single();
+
+    if (!memberData) {
+      return { success: false, error: 'Unauthorized. You do not have permission to upload to this event.' };
+    }
+
     // Determine media type based on Cloudinary resource_type
     const mediaType = uploadResult.resource_type === 'video' ? 'video' : 'photo';
     

@@ -36,8 +36,8 @@ const Navbar = () => {
 
   const navLinks = [
     { name: 'Events', href: '/events', icon: Calendar },
-    { name: 'Gallery', href: '/events', icon: ImageIcon }, // Currently routes to events as per existing structure
-    { name: 'AI Search', href: '/events', icon: Sparkles },
+    { name: 'Gallery', href: '/media', icon: ImageIcon },
+    { name: 'AI Search', href: '/search', icon: Sparkles },
     { name: 'Upload', href: '/upload', icon: UploadCloud },
     { name: 'About', href: '/', icon: Info },
   ];
@@ -82,9 +82,14 @@ const Navbar = () => {
                   <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-500 rounded-full border border-slate-950"></span>
                 </button>
                 <div className="h-6 w-px bg-slate-800 mx-1"></div>
-                <Button variant="ghost" onClick={() => supabase.auth.signOut()} className="gap-2">
-                  <User className="w-4 h-4" />
-                  <span className="hidden lg:inline">Profile</span>
+                <Link href="/profile">
+                  <Button variant="ghost" className="gap-2">
+                    <User className="w-4 h-4" />
+                    <span className="hidden lg:inline">Profile</span>
+                  </Button>
+                </Link>
+                <Button variant="ghost" onClick={() => supabase.auth.signOut()} className="text-slate-400 hover:text-red-400 px-3">
+                  <span className="hidden lg:inline">Sign Out</span>
                 </Button>
               </>
             ) : (
@@ -138,10 +143,17 @@ const Navbar = () => {
               ))}
               <div className="pt-4 mt-4 border-t border-white/10 flex flex-col gap-3">
                 {user ? (
-                  <Button variant="secondary" onClick={() => supabase.auth.signOut()} className="w-full justify-center">
-                    <User className="mr-2 h-4 w-4" />
-                    Sign Out
-                  </Button>
+                  <>
+                    <Link href="/profile" className="w-full">
+                      <Button variant="secondary" className="w-full justify-center">
+                        <User className="mr-2 h-4 w-4" />
+                        Profile
+                      </Button>
+                    </Link>
+                    <Button variant="outline" onClick={() => supabase.auth.signOut()} className="w-full justify-center text-red-400 border-red-500/20">
+                      Sign Out
+                    </Button>
+                  </>
                 ) : (
                   <>
                     <Link href="/login" className="w-full">

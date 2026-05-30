@@ -42,10 +42,9 @@ export default function EventCard({ event }: EventCardProps) {
 
   const gradient = getGradientClass(event.category);
 
-  // Deterministic mock calculations based on name to keep component pure
-  const nameLen = event.name.length;
-  const mockMediaCount = (nameLen % 21) + 4; // e.g. 4 to 24
-  const mockParticipantCount = ((nameLen * 3) % 95) + 18; // e.g. 18 to 112
+  // Real metrics from DB
+  const mediaCount = event.mediaCount || 0;
+  const participantCount = event.memberCount || 0;
 
   return (
     <article className="group relative flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden hover:-translate-y-1.5 hover:shadow-xl hover:border-slate-300 transition-all duration-300 h-full">
@@ -103,16 +102,15 @@ export default function EventCard({ event }: EventCardProps) {
           {event.description || 'Join this exciting club event to connect, participate, and explore high quality content.'}
         </p>
 
-        {/* Future-Ready Stat Metrics */}
         <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-medium text-slate-500">
           <div className="flex items-center gap-1">
             <ImageIcon className="w-4 h-4 text-slate-400" />
-            <span>{mockMediaCount} Photos</span>
+            <span>{mediaCount} Photos</span>
           </div>
 
           <div className="flex items-center gap-1">
             <Users className="w-4 h-4 text-slate-400" />
-            <span>{mockParticipantCount} Members</span>
+            <span>{participantCount} Members</span>
           </div>
         </div>
       </div>

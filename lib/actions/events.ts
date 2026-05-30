@@ -16,6 +16,8 @@ export interface EventWithProfile {
     full_name: string | null;
     role: 'admin' | 'photographer' | 'member' | 'viewer';
   } | null;
+  mediaCount?: number;
+  memberCount?: number;
 }
 
 export interface ServerActionResponse<T> {
@@ -32,9 +34,10 @@ export async function getEvents(): Promise<ServerActionResponse<EventWithProfile
   try {
     const supabase = await createClient();
     
+    // Also fetch the media and member counts
     const { data, error } = await supabase
       .from('events')
-      .select('*, profiles(full_name, role)')
+      .select('*, profiles(full_name, role), media(count), event_members(count)')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -45,7 +48,16 @@ export async function getEvents(): Promise<ServerActionResponse<EventWithProfile
       };
     }
 
-    const formattedEvents = data as unknown as EventWithProfile[] | null;
+    // Map over the data to properly extract counts
+    const formattedEvents = (data as any[]).map((evt) => {
+      const mCount = evt.media && evt.media.length > 0 ? evt.media[0].count : 0;
+      const memCount = evt.event_members && evt.event_members.length > 0 ? evt.event_members[0].count : 0;
+      return {
+        ...evt,
+        mediaCount: mCount,
+        memberCount: memCount,
+      } as EventWithProfile;
+    });
 
     return {
       success: true,

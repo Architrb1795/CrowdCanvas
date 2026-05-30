@@ -15,6 +15,7 @@ export interface Database {
           role: 'admin' | 'photographer' | 'member' | 'viewer'
           full_name: string | null
           avatar_url: string | null
+          email: string | null
           created_at: string
         }
         Insert: {
@@ -22,6 +23,7 @@ export interface Database {
           role?: 'admin' | 'photographer' | 'member' | 'viewer'
           full_name?: string | null
           avatar_url?: string | null
+          email?: string | null
           created_at?: string
         }
         Update: {
@@ -29,6 +31,7 @@ export interface Database {
           role?: 'admin' | 'photographer' | 'member' | 'viewer'
           full_name?: string | null
           avatar_url?: string | null
+          email?: string | null
           created_at?: string
         }
         Relationships: [
@@ -37,6 +40,45 @@ export interface Database {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      event_members: {
+        Row: {
+          id: string
+          event_id: string | null
+          user_id: string | null
+          role: 'owner' | 'admin' | 'uploader' | 'viewer'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          event_id?: string | null
+          user_id?: string | null
+          role?: 'owner' | 'admin' | 'uploader' | 'viewer'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          event_id?: string | null
+          user_id?: string | null
+          role?: 'owner' | 'admin' | 'uploader' | 'viewer'
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_members_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           }
         ]
@@ -250,6 +292,7 @@ export interface Database {
     }
     Enums: {
       user_role: 'admin' | 'photographer' | 'member' | 'viewer'
+      event_member_role: 'owner' | 'admin' | 'uploader' | 'viewer'
     }
     CompositeTypes: {
       [_ in never]: never

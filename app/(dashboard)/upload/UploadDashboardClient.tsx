@@ -50,7 +50,7 @@ export default function UploadDashboardClient({ initialEvents }: { initialEvents
                 <option value="" disabled>-- Select an Event --</option>
                 {initialEvents.map(evt => (
                   <option key={evt.id} value={evt.id}>
-                    {evt.name} {evt.event_date ? `(${new Date(evt.event_date).toLocaleDateString()})` : ''}
+                    {evt.name} {evt.event_date ? `(${new Date(evt.event_date).toLocaleDateString('en-US')})` : ''}
                   </option>
                 ))}
               </select>

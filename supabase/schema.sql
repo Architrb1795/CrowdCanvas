@@ -5,6 +5,8 @@
 CREATE TYPE user_role AS ENUM ('admin', 'photographer', 'member', 'viewer');
 CREATE TYPE event_member_role AS ENUM ('owner', 'admin', 'uploader', 'viewer');
 
+CREATE EXTENSION IF NOT EXISTS vector;
+
 CREATE TABLE profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     role user_role DEFAULT 'viewer',
@@ -49,7 +51,13 @@ CREATE TABLE events (
     cover_url TEXT,
     is_public BOOLEAN DEFAULT true,
     created_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    
+    -- AI Event Intelligence
+    ai_summary TEXT,
+    ai_highlights JSONB,
+    event_story JSONB,
+    event_tags TEXT[]
 );
 
 CREATE TABLE event_members (
@@ -113,8 +121,22 @@ CREATE TABLE media (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     
     -- Future AI Integration Hooks
-    ai_tags JSONB DEFAULT '[]'::jsonb,
+    ai_tags TEXT[],
     faces_detected JSONB DEFAULT '[]'::jsonb,
+    ai_caption TEXT,
+    ai_summary TEXT,
+    ai_objects TEXT[],
+    ocr_text TEXT,
+    scene_type TEXT,
+    mood TEXT,
+    people_count INTEGER,
+    dominant_colors TEXT[],
+    similarity_group TEXT,
+    ai_processed BOOLEAN DEFAULT false,
+    ai_processed_at TIMESTAMPTZ,
+    embedding VECTOR(768),
+    processing_error TEXT,
+    processing_version TEXT,
 
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -256,3 +278,53 @@ ALTER PUBLICATION supabase_realtime ADD TABLE likes;
 ALTER PUBLICATION supabase_realtime ADD TABLE comments;
 ALTER PUBLICATION supabase_realtime ADD TABLE event_members;
 ALTER PUBLICATION supabase_realtime ADD TABLE event_role_requests;
+
+-- ==========================================
+-- 6. AI & VECTOR SEARCH RPC
+-- ==========================================
+
+CREATE OR REPLACE FUNCTION match_media (
+  query_embedding vector(768),
+  match_threshold float,
+  match_count int,
+  filter_event_id uuid DEFAULT NULL,
+  filter_mood text DEFAULT NULL,
+  filter_scene text DEFAULT NULL,
+  filter_people_count int DEFAULT NULL
+)
+RETURNS TABLE (
+  id uuid,
+  event_id uuid,
+  file_url text,
+  thumbnail_url text,
+  media_type text,
+  ai_caption text,
+  ai_tags text[],
+  similarity float
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    media.id,
+    media.event_id,
+    media.file_url,
+    media.thumbnail_url,
+    media.media_type,
+    media.ai_caption,
+    media.ai_tags,
+    1 - (media.embedding <=> query_embedding) AS similarity
+  FROM media
+  WHERE media.embedding IS NOT NULL
+    AND 1 - (media.embedding <=> query_embedding) > match_threshold
+    AND (filter_event_id IS NULL OR media.event_id = filter_event_id)
+    AND (filter_mood IS NULL OR media.mood = filter_mood)
+    AND (filter_scene IS NULL OR media.scene_type = filter_scene)
+    AND (filter_people_count IS NULL OR media.people_count = filter_people_count)
+  ORDER BY media.embedding <=> query_embedding
+  LIMIT match_count;
+END;
+$$;
+
+CREATE INDEX IF NOT EXISTS idx_media_embedding ON media USING hnsw (embedding vector_cosine_ops);

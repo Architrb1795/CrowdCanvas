@@ -1,6 +1,6 @@
 import React from 'react';
 import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
+import { redirect, notFound } from 'next/navigation';
 import EventSettingsClient from '@/components/events/EventSettingsClient';
 import { getEventMembers } from '@/lib/actions/event_members';
 import { getPendingRequests } from '@/lib/actions/role_requests';
@@ -25,11 +25,7 @@ export default async function EventSettingsPage(props: { params: Promise<{ id: s
     .single();
 
   if (eventError || !event) {
-    return (
-      <div className="min-h-screen pt-20 px-4 text-center">
-        <h1 className="text-2xl font-bold text-white">Event Not Found</h1>
-      </div>
-    );
+    notFound();
   }
 
   // Verify member access

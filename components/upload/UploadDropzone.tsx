@@ -37,7 +37,7 @@ export default function UploadDropzone({ eventId, isPrivate, onUploadComplete }:
         duration: info.duration,
       }, isPrivate);
 
-      if (!dbResult.success) {
+      if (!dbResult.success || !dbResult.mediaId) {
         setErrorMsg(dbResult.error || 'Database sync failed.');
       } else {
         if (onUploadComplete) onUploadComplete();
@@ -76,6 +76,11 @@ export default function UploadDropzone({ eventId, isPrivate, onUploadComplete }:
       <CldUploadWidget
         uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET}
         onSuccess={handleUploadSuccess}
+        onError={(error) => {
+          console.error("Cloudinary upload error:", error);
+          setErrorMsg(typeof error === 'string' ? error : "An error occurred during upload. Please try again.");
+          setIsUploading(false);
+        }}
         options={{
           multiple: true,
           maxFiles: 50,
@@ -101,10 +106,15 @@ export default function UploadDropzone({ eventId, isPrivate, onUploadComplete }:
           }
         }}
       >
-        {({ open }) => {
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        {({ open } = { open: undefined } as any) => {
           return (
             <div 
-              onClick={() => !isUploading && open()}
+              onClick={() => {
+                if (!isUploading && typeof open === 'function') {
+                  open();
+                }
+              }}
               className={`w-full h-80 rounded-2xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center p-8 text-center group cursor-pointer ${
                 isUploading 
                   ? 'border-indigo-500/50 bg-indigo-500/5 cursor-wait' 

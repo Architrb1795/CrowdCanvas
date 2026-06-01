@@ -105,7 +105,7 @@ export async function searchUsers(query: string, eventId?: string): Promise<Serv
 export async function addEventMember(eventId: string, userId: string, role: EventMemberRole): Promise<ServerActionResponse<void>> {
   try {
     const hasPermission = await checkEventPermission(eventId, ['owner', 'admin']);
-    if (!hasPermission) throw new Error('Unauthorized');
+    if (!hasPermission) return { success: false, error: 'Unauthorized' };
 
     const supabase = await createClient();
     const { error } = await supabase
@@ -123,17 +123,17 @@ export async function addEventMember(eventId: string, userId: string, role: Even
 export async function updateEventMemberRole(eventId: string, userId: string, newRole: EventMemberRole): Promise<ServerActionResponse<void>> {
   try {
     const hasPermission = await checkEventPermission(eventId, ['owner', 'admin']);
-    if (!hasPermission) throw new Error('Unauthorized');
+    if (!hasPermission) return { success: false, error: 'Unauthorized' };
 
     // Cannot downgrade an owner unless it's a transfer (handled separately)
     // Actually, cannot change an owner's role at all here.
-    if (newRole === 'owner') throw new Error('Use transfer ownership to assign a new owner.');
+    if (newRole === 'owner') return { success: false, error: 'Use transfer ownership to assign a new owner.' };
 
     const supabase = await createClient();
     
     // Check if target user is currently an owner
     const { data: targetData } = await supabase.from('event_members').select('role').eq('event_id', eventId).eq('user_id', userId).single();
-    if (targetData?.role === 'owner') throw new Error('Cannot change the role of the owner.');
+    if (targetData?.role === 'owner') return { success: false, error: 'Cannot change the role of the owner.' };
 
     const { error } = await supabase
       .from('event_members')
@@ -152,13 +152,13 @@ export async function updateEventMemberRole(eventId: string, userId: string, new
 export async function removeEventMember(eventId: string, userId: string): Promise<ServerActionResponse<void>> {
   try {
     const hasPermission = await checkEventPermission(eventId, ['owner', 'admin']);
-    if (!hasPermission) throw new Error('Unauthorized');
+    if (!hasPermission) return { success: false, error: 'Unauthorized' };
 
     const supabase = await createClient();
     
     // Check if target user is currently an owner
     const { data: targetData } = await supabase.from('event_members').select('role').eq('event_id', eventId).eq('user_id', userId).single();
-    if (targetData?.role === 'owner') throw new Error('Cannot remove the owner of the event.');
+    if (targetData?.role === 'owner') return { success: false, error: 'Cannot remove the owner of the event.' };
 
     const { error } = await supabase
       .from('event_members')
@@ -178,11 +178,11 @@ export async function transferOwnership(eventId: string, newOwnerId: string): Pr
   try {
     // Only current owner can transfer ownership
     const hasPermission = await checkEventPermission(eventId, ['owner']);
-    if (!hasPermission) throw new Error('Unauthorized. Only the owner can transfer ownership.');
+    if (!hasPermission) return { success: false, error: 'Unauthorized. Only the owner can transfer ownership.' };
 
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Unauthorized');
+    if (!user) return { success: false, error: 'Unauthorized' };
 
     // Make new owner an 'owner'
     const { error: err1 } = await supabase

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Menu, X, User, Bell, Sparkles, Image as ImageIcon, Calendar, UploadCloud, Info, Settings } from 'lucide-react';
+import { Menu, X, User, Bell, Sparkles, Image as ImageIcon, Calendar, UploadCloud, Info, Settings, BrainCircuit } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { type User as SupabaseUser } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/Button';
@@ -37,7 +37,7 @@ const Navbar = () => {
   const navLinks = [
     { name: 'Events', href: '/events', icon: Calendar },
     { name: 'Gallery', href: '/media', icon: ImageIcon },
-    { name: 'AI Search', href: '/search', icon: Sparkles },
+    { name: 'AI Search', href: '/ai-search', icon: Sparkles },
     { name: 'Upload', href: '/upload', icon: UploadCloud },
     { name: 'About', href: '/', icon: Info },
   ];
@@ -116,6 +116,12 @@ const Navbar = () => {
 
                       <Link href="/profile" className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
                         <Settings className="w-4 h-4 text-slate-400" /> Account Settings
+                      </Link>
+
+                      <div className="h-px bg-white/5 my-1"></div>
+                      
+                      <Link href="/admin/analytics" className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                        <BrainCircuit className="w-4 h-4 text-purple-400" /> Admin Analytics
                       </Link>
                       
                       <div className="h-px bg-white/5 my-1"></div>

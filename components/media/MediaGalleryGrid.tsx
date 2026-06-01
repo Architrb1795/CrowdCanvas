@@ -1,17 +1,93 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/rules-of-hooks */
 'use client';
 
-import React, { useState, useTransition } from 'react';
-import { Video, X, Download, User, Calendar, FileType, Maximize2, Trash2, Edit2, Save, Share2, Check, Lock, Globe } from 'lucide-react';
+import React, { useState, useTransition, useEffect } from 'react';
+import { Video, X, Download, User, Calendar, FileType, Maximize2, Trash2, Edit2, Save, Share2, Check, Lock, Globe, Sparkles, Loader2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { deleteMedia, saveMediaCopy, toggleMediaVisibility } from '@/lib/actions/media';
+import { createClient } from '@/lib/supabase/client';
+import { RecommendationCard } from './RecommendationCard';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUserId }: { mediaItems: any[], canManageEvent?: boolean, currentUserId?: string }) {
+  const router = useRouter();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedMedia, setSelectedMedia] = useState<any | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editFilter, setEditFilter] = useState<string>('');
   const [isPending, startTransition] = useTransition();
   const [copiedLink, setCopiedLink] = useState(false);
+  const [similarMedia, setSimilarMedia] = useState<any[]>([]);
+  const [isLoadingSimilar, setIsLoadingSimilar] = useState(false);
+  const [recommendationSessionId, setRecommendationSessionId] = useState<string>('');
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [errorDialog, setErrorDialog] = useState<string | null>(null);
+
+  const selectedIndex = selectedMedia ? mediaItems.findIndex(m => m.id === selectedMedia.id) : -1;
+
+  const handlePrev = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (selectedIndex > 0) setSelectedMedia(mediaItems[selectedIndex - 1]);
+  };
+
+  const handleNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (selectedIndex < mediaItems.length - 1) setSelectedMedia(mediaItems[selectedIndex + 1]);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!selectedMedia || isEditing) return;
+      if (e.key === 'ArrowLeft' && selectedIndex > 0) {
+        setSelectedMedia(mediaItems[selectedIndex - 1]);
+      } else if (e.key === 'ArrowRight' && selectedIndex < mediaItems.length - 1) {
+        setSelectedMedia(mediaItems[selectedIndex + 1]);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedMedia, isEditing, selectedIndex, mediaItems]);
+
+  useEffect(() => {
+    if (selectedMedia && !isEditing) {
+      setSimilarMedia([]);
+      setRecommendationSessionId('');
+      setIsLoadingSimilar(true);
+      fetch('/api/ai/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mediaId: selectedMedia.id })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.recommendations) {
+            setSimilarMedia(data.recommendations);
+            const sessionId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(7);
+            setRecommendationSessionId(sessionId);
+            
+            fetch('/api/ai/recommend/track', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data.recommendations.map((r: any, idx: number) => ({
+                    source_media_id: selectedMedia.id,
+                    recommended_media_id: r.id,
+                    event_type: 'generated',
+                    session_id: sessionId,
+                    position: idx,
+                    score: r.matchPercentage,
+                    category: r.category,
+                    reason: r.reason
+                })))
+            }).catch(() => {});
+        }
+      })
+      .catch(console.error)
+      .finally(() => setIsLoadingSimilar(false));
+    }
+  }, [selectedMedia, isEditing]);
 
   // Bulk selection state
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -79,6 +155,63 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
     ? applyTransformation(selectedMedia?.file_url, editFilter)
     : selectedMedia?.file_url;
 
+  const handleGenerateImageAI = async () => {
+    if (!selectedMedia) return;
+    setIsGeneratingAI(true);
+    try {
+      const res = await fetch('/api/ai/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mediaId: selectedMedia.id,
+          eventId: selectedMedia.event_id,
+          fileUrl: selectedMedia.file_url,
+          mediaType: selectedMedia.media_type
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        let msg = 'Failed to generate AI analysis';
+        if (errorData?.error) {
+          msg = typeof errorData.error === 'object' ? errorData.error.message || JSON.stringify(errorData.error) : errorData.error;
+          
+          // Attempt to parse if the backend forwarded a stringified JSON error
+          try {
+            const jsonStart = msg.indexOf('{');
+            if (jsonStart !== -1) {
+              const parsed = JSON.parse(msg.substring(jsonStart));
+              if (parsed?.error?.message) msg = parsed.error.message;
+              else if (parsed?.message) msg = parsed.message;
+            }
+          } catch(e) {
+            // Ignore parse errors
+          }
+
+          // Apply friendly fallback for known rate limits
+          if (msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('503')) {
+            msg = "AI Service is currently experiencing high demand. Please wait a few moments and try again.";
+          }
+        }
+        setErrorDialog(msg);
+        return;
+      }
+
+      // Fetch the updated media item to show the new insights instantly
+      const supabase = createClient();
+      const { data } = await supabase.from('media').select('*').eq('id', selectedMedia.id).single();
+      if (data) {
+        setSelectedMedia(data);
+        router.refresh(); // Sync the server-side mediaItems prop so it persists when modal is closed
+      }
+    } catch (err: any) {
+      console.error(err);
+      setErrorDialog('Failed to connect to AI service. Please check your internet connection and try again.');
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!selectedMedia) return;
     const confirmDelete = window.confirm('Are you sure you want to delete this media?');
@@ -89,7 +222,7 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
       if (res.success) {
         setSelectedMedia(null);
       } else {
-        alert(res.error || 'Failed to delete media');
+        setErrorDialog(res.error || 'Failed to delete media');
       }
     });
   };
@@ -101,7 +234,7 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
       if (res.success) {
         setSelectedMedia({ ...selectedMedia, is_private: !selectedMedia.is_private });
       } else {
-        alert(res.error || 'Failed to toggle visibility');
+        setErrorDialog(res.error || 'Failed to toggle visibility');
       }
     });
   };
@@ -109,7 +242,7 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
   const handleSaveCopy = async () => {
     if (!selectedMedia) return;
     if (!editFilter) {
-      alert('Please select a filter before saving a copy.');
+      setErrorDialog('Please select a filter before saving a copy.');
       return;
     }
 
@@ -120,12 +253,12 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
       
       const res = await saveMediaCopy(selectedMedia.id, selectedMedia.event_id, newUrl, newThumb);
       if (res.success) {
-        alert('Saved as a new copy successfully!');
+        // alert('Saved as a new copy successfully!');
         setIsEditing(false);
         setEditFilter('');
         setSelectedMedia(null); // Close modal to see the new item in gallery
       } else {
-        alert(res.error || 'Failed to save copy');
+        setErrorDialog(res.error || 'Failed to save copy');
       }
     });
   };
@@ -140,10 +273,48 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
 
   const canEditOrDelete = canManageEvent || selectedMedia?.uploaded_by === currentUserId;
 
+  if (!mediaItems || mediaItems.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-slate-900/30 rounded-3xl border border-slate-800 border-dashed">
+        <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mb-6">
+          <Video className="w-10 h-10 text-slate-500" />
+        </div>
+        <h3 className="text-xl font-bold text-white mb-2">No Media Found</h3>
+        <p className="text-slate-400 max-w-sm mb-8">
+          This gallery is currently empty. Be the first to upload photos or videos to this event!
+        </p>
+      </div>
+    );
+  }
+
   return (
     <>
+      {/* Error Dialog */}
+      {errorDialog && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-rose-500"></div>
+            <div className="flex gap-4 items-start mb-6">
+              <div className="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center shrink-0">
+                <AlertCircle className="w-6 h-6 text-red-500" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white mb-1">Action Failed</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">{errorDialog}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setErrorDialog(null)}
+              className="w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-medium transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Bulk Selection Header */}
-      {canManageEvent && mediaItems.length > 0 && (
+      {canManageEvent && (
         <div className="flex justify-between items-center mb-6 p-4 bg-slate-900 rounded-xl border border-white/5 shadow-sm">
           <div className="text-sm font-medium text-slate-300">
             {isSelectionMode ? `${selectedIds.length} items selected` : 'Manage Gallery'}
@@ -222,8 +393,8 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
                       {media.profiles?.full_name || 'Unknown'}
                       {media.is_private && <Lock className="w-3 h-3 text-red-400" />}
                     </p>
-                    <p className="text-slate-300 text-xs">
-                      {new Date(media.created_at).toLocaleDateString()}
+                    <p className="text-slate-300 text-xs" suppressHydrationWarning>
+                      {new Date(media.created_at).toLocaleDateString('en-US')}
                     </p>
                   </div>
                   <div className="p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/40 transition-colors">
@@ -275,6 +446,26 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
 
             {/* Main Visual Area */}
             <div className="flex-1 bg-black flex flex-col items-center justify-center min-h-[40vh] md:min-h-0 relative">
+              {/* Left Navigation */}
+              {selectedIndex > 0 && (
+                <button 
+                  onClick={handlePrev}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/40 hover:bg-black/70 text-white rounded-full backdrop-blur-md transition-all hover:scale-110"
+                >
+                  <ChevronLeft className="w-8 h-8" />
+                </button>
+              )}
+              
+              {/* Right Navigation */}
+              {selectedIndex >= 0 && selectedIndex < mediaItems.length - 1 && (
+                <button 
+                  onClick={handleNext}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/40 hover:bg-black/70 text-white rounded-full backdrop-blur-md transition-all hover:scale-110"
+                >
+                  <ChevronRight className="w-8 h-8" />
+                </button>
+              )}
+
               {selectedMedia.media_type === 'video' ? (
                 <video 
                   src={currentPreviewUrl} 
@@ -293,7 +484,7 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
             </div>
 
             {/* Metadata Sidebar */}
-            <div className="w-full md:w-80 flex-shrink-0 bg-slate-900 border-l border-white/10 p-6 flex flex-col gap-6 overflow-y-auto max-h-[40vh] md:max-h-full">
+            <div className="w-full md:w-80 flex-shrink-0 bg-slate-900 border-l border-white/10 p-6 flex flex-col gap-6 overflow-y-auto custom-scrollbar max-h-[40vh] md:max-h-full">
               
               {isEditing ? (
                 <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col h-full">
@@ -353,8 +544,8 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
                       </div>
                       <div>
                         <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Upload Date</p>
-                        <p className="text-sm font-medium text-slate-200">
-                          {new Date(selectedMedia.created_at).toLocaleString()}
+                        <p className="text-sm font-medium text-slate-200" suppressHydrationWarning>
+                          {new Date(selectedMedia.created_at).toLocaleString('en-US')}
                         </p>
                       </div>
                     </div>
@@ -377,7 +568,119 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
                     </div>
                   </div>
 
-                  <div className="mt-auto pt-6 space-y-3">
+                  {/* AI Insights Panel */}
+                  <div className="bg-slate-950/50 rounded-xl p-4 border border-indigo-500/10 mb-6">
+                    <h4 className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5" /> AI Analysis
+                    </h4>
+                    
+                    {(selectedMedia.ai_caption || selectedMedia.mood || selectedMedia.scene_type) ? (
+                      <>
+                        {selectedMedia.ai_caption && (
+                          <p className="text-sm text-slate-300 mb-3">{selectedMedia.ai_caption}</p>
+                        )}
+                        
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          {selectedMedia.mood && (
+                            <div className="bg-slate-900 px-2 py-1.5 rounded flex flex-col">
+                              <span className="text-slate-500">Mood</span>
+                              <span className="text-slate-200 capitalize">{selectedMedia.mood}</span>
+                            </div>
+                          )}
+                          {selectedMedia.scene_type && (
+                            <div className="bg-slate-900 px-2 py-1.5 rounded flex flex-col">
+                              <span className="text-slate-500">Scene</span>
+                              <span className="text-slate-200 capitalize">{selectedMedia.scene_type}</span>
+                            </div>
+                          )}
+                          {selectedMedia.people_count !== null && selectedMedia.people_count !== undefined && (
+                            <div className="bg-slate-900 px-2 py-1.5 rounded flex flex-col">
+                              <span className="text-slate-500">People</span>
+                              <span className="text-slate-200">{selectedMedia.people_count}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {selectedMedia.ai_tags && selectedMedia.ai_tags.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-1.5">
+                            {selectedMedia.ai_tags.map((tag: string, i: number) => (
+                              <span key={i} className="px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-[10px] text-indigo-300 uppercase tracking-wider">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        
+                        <div className="mt-4 flex justify-end">
+                          <button 
+                            onClick={handleGenerateImageAI}
+                            disabled={isGeneratingAI || selectedMedia.media_type === 'video'}
+                            className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={selectedMedia.media_type === 'video' ? "AI Analysis is only supported for photos" : "Regenerate Analysis"}
+                          >
+                            {isGeneratingAI ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                            {isGeneratingAI ? 'Analyzing...' : 'Regenerate'}
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-center py-4">
+                        <p className="text-xs text-slate-500 mb-3">No AI insights generated for this image yet.</p>
+                        <button 
+                          onClick={handleGenerateImageAI}
+                          disabled={isGeneratingAI || selectedMedia.media_type === 'video'}
+                          className="px-4 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-xs font-medium rounded-lg transition-colors flex items-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={selectedMedia.media_type === 'video' ? "AI Analysis is only supported for photos" : "Generate Analysis"}
+                        >
+                          {isGeneratingAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                          {isGeneratingAI ? 'Analyzing Image...' : 'Generate AI Analysis'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* AI Similar Photos */}
+                  {!isEditing && (
+                    <div className="mb-6">
+                      <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">AI Similar Photos</h4>
+                      {isLoadingSimilar ? (
+                        <div className="space-y-3">
+                           {[1,2,3].map(i => (
+                             <div key={i} className="h-20 bg-slate-800 animate-pulse rounded-lg flex gap-3 p-2">
+                               <div className="w-16 h-16 bg-slate-700 rounded-md"></div>
+                               <div className="flex-1 space-y-2 py-1">
+                                 <div className="h-3 bg-slate-700 rounded w-1/3"></div>
+                                 <div className="h-2 bg-slate-700 rounded w-2/3"></div>
+                               </div>
+                             </div>
+                           ))}
+                        </div>
+                      ) : similarMedia.length > 0 ? (
+                        <div className="space-y-2">
+                          {similarMedia.map((media, idx) => (
+                             <RecommendationCard
+                                key={media.id}
+                                media={media}
+                                sourceMediaId={selectedMedia.id}
+                                sessionId={recommendationSessionId}
+                                currentUserId={currentUserId}
+                                position={idx}
+                                onClick={() => {
+                                  const fullMedia = mediaItems.find(m => m.id === media.id);
+                                  if (fullMedia) setSelectedMedia(fullMedia);
+                                }}
+                             />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-slate-500 text-center py-4 bg-slate-800/30 rounded-lg">
+                           No similar photos found yet.<br/>Upload more media to improve recommendations.
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="mt-auto space-y-3">
                     {selectedMedia.media_type === 'photo' && canEditOrDelete && (
                       <button 
                         onClick={() => setIsEditing(true)}

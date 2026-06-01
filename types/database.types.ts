@@ -98,6 +98,10 @@ export interface Database {
           is_public: boolean
           created_by: string | null
           created_at: string
+          ai_summary: string | null
+          ai_highlights: Json | null
+          event_story: Json | null
+          event_tags: string[] | null
         }
         Insert: {
           id?: string
@@ -110,6 +114,10 @@ export interface Database {
           is_public?: boolean
           created_by?: string | null
           created_at?: string
+          ai_summary?: string | null
+          ai_highlights?: Json | null
+          event_story?: Json | null
+          event_tags?: string[] | null
         }
         Update: {
           id?: string
@@ -122,6 +130,10 @@ export interface Database {
           is_public?: boolean
           created_by?: string | null
           created_at?: string
+          ai_summary?: string | null
+          ai_highlights?: Json | null
+          event_story?: Json | null
+          event_tags?: string[] | null
         }
         Relationships: [
           {
@@ -194,8 +206,22 @@ export interface Database {
           upload_status: 'pending' | 'processing' | 'completed' | 'failed' | null
           processing_status: string | null
           updated_at: string | null
-          ai_tags: Json | null
+          ai_tags: string[] | null
           faces_detected: Json | null
+          ai_caption: string | null
+          ai_summary: string | null
+          ai_objects: string[] | null
+          ocr_text: string | null
+          scene_type: string | null
+          mood: string | null
+          people_count: number | null
+          dominant_colors: string[] | null
+          similarity_group: string | null
+          ai_processed: boolean | null
+          ai_processed_at: string | null
+          embedding: string | null
+          processing_error: string | null
+          processing_version: string | null
           created_at: string
         }
         Insert: {
@@ -216,8 +242,22 @@ export interface Database {
           upload_status?: 'pending' | 'processing' | 'completed' | 'failed' | null
           processing_status?: string | null
           updated_at?: string | null
-          ai_tags?: Json | null
+          ai_tags?: string[] | null
           faces_detected?: Json | null
+          ai_caption?: string | null
+          ai_summary?: string | null
+          ai_objects?: string[] | null
+          ocr_text?: string | null
+          scene_type?: string | null
+          mood?: string | null
+          people_count?: number | null
+          dominant_colors?: string[] | null
+          similarity_group?: string | null
+          ai_processed?: boolean | null
+          ai_processed_at?: string | null
+          embedding?: string | null
+          processing_error?: string | null
+          processing_version?: string | null
           created_at?: string
         }
         Update: {
@@ -238,8 +278,22 @@ export interface Database {
           upload_status?: 'pending' | 'processing' | 'completed' | 'failed' | null
           processing_status?: string | null
           updated_at?: string | null
-          ai_tags?: Json | null
+          ai_tags?: string[] | null
           faces_detected?: Json | null
+          ai_caption?: string | null
+          ai_summary?: string | null
+          ai_objects?: string[] | null
+          ocr_text?: string | null
+          scene_type?: string | null
+          mood?: string | null
+          people_count?: number | null
+          dominant_colors?: string[] | null
+          similarity_group?: string | null
+          ai_processed?: boolean | null
+          ai_processed_at?: string | null
+          embedding?: string | null
+          processing_error?: string | null
+          processing_version?: string | null
           created_at?: string
         }
         Relationships: [

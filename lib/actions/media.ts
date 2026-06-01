@@ -52,7 +52,7 @@ export async function syncMediaToDatabase(
       : uploadResult.secure_url.replace('/upload/', '/upload/c_fill,g_auto,w_500,h_500,q_auto,f_auto/');
 
     // Insert into the expanded media table
-    const { error: dbError } = await supabase
+    const { data: insertedMedia, error: dbError } = await supabase
       .from('media')
       .insert({
         event_id: eventId,
@@ -68,10 +68,12 @@ export async function syncMediaToDatabase(
         duration: uploadResult.duration || null,
         mime_type: `${uploadResult.resource_type}/${uploadResult.format}`,
         upload_status: 'completed',
-        processing_status: 'idle', // ready for AI processing in the future
-      });
+        processing_status: 'pending', // ready for AI processing
+      })
+      .select('id')
+      .single();
 
-    if (dbError) {
+    if (dbError || !insertedMedia) {
       console.error('Supabase Insertion Error:', dbError);
       return { success: false, error: 'Failed to sync media metadata to database.' };
     }
@@ -79,7 +81,7 @@ export async function syncMediaToDatabase(
     revalidatePath('/events/[id]', 'page');
     revalidatePath('/upload');
     
-    return { success: true };
+    return { success: true, mediaId: insertedMedia.id };
   } catch (error) {
     console.error('Sync Exception:', error);
     return { success: false, error: 'An unexpected error occurred during database sync.' };

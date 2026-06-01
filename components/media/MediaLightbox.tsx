@@ -171,7 +171,7 @@ export default function MediaLightbox({ mediaList, initialIndex, onClose }: Medi
                     </div>
                     <div className="flex justify-between">
                       <span>Date</span>
-                      <span className="text-slate-200">{new Date(currentMedia.created_at).toLocaleDateString()}</span>
+                      <span className="text-slate-200">{new Date(currentMedia.created_at).toLocaleDateString('en-US')}</span>
                     </div>
                   </div>
                 </div>

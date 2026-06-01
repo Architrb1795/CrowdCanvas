@@ -128,13 +128,13 @@ export default function EventCard({ event }: EventCardProps) {
       {/* Action footer wrapper */}
       <div className="flex border-t border-slate-100/80 bg-slate-50">
         <Link 
-          href={`/media?eventId=${event.id}`}
+          href={`/events/${event.id}`}
           className={`flex-1 hover:bg-indigo-50 px-6 py-3.5 flex items-center justify-between text-sm font-semibold text-slate-700 hover:text-indigo-700 transition-all group/link ${
             (event.currentUserRole === 'owner' || event.currentUserRole === 'admin') ? 'border-r border-slate-200/60' : ''
           }`}
           aria-label={`View photos and media uploads for event: ${event.name}`}
         >
-          <span>Browse Media Gallery</span>
+          <span>View Event Dashboard</span>
           <ArrowRight className="w-4 h-4 text-slate-400 group-hover/link:translate-x-1 group-hover/link:text-indigo-600 transition-all" />
         </Link>
         

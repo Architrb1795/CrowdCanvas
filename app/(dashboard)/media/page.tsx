@@ -5,6 +5,8 @@ import RequestAccessButton from '@/components/events/RequestAccessButton';
 import MediaGalleryGrid from '@/components/media/MediaGalleryGrid';
 import AdminDiagnosticsPanel from '@/components/media/AdminDiagnosticsPanel';
 
+export const revalidate = 0;
+
 // NOTE: In Next.js 14, page props searchParams are a standard synchronous object or Promise depending on config, but typing them standard is fine.
 export default async function MediaPage(
   props: {

@@ -51,7 +51,7 @@ export async function getProfile(): Promise<ServerActionResponse<UserProfileData
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (authError || !user) throw new Error('Unauthorized');
+    if (authError || !user) return { success: false, error: 'Unauthorized' };
 
     // Fetch profile
     const { data: profile, error: profileError } = await supabase
@@ -90,7 +90,7 @@ export async function updateProfile(data: { full_name?: string; bio?: string }):
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) throw new Error('Unauthorized');
+    if (!user) return { success: false, error: 'Unauthorized' };
 
     const updateData: any = {};
     if (data.full_name !== undefined) updateData.full_name = data.full_name;
@@ -115,7 +115,7 @@ export async function updateAvatar(url: string): Promise<ServerActionResponse<vo
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) throw new Error('Unauthorized');
+    if (!user) return { success: false, error: 'Unauthorized' };
 
     const { error } = await supabase
       .from('profiles')
@@ -136,7 +136,7 @@ export async function getUserUploads(): Promise<ServerActionResponse<UserUploadD
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) throw new Error('Unauthorized');
+    if (!user) return { success: false, error: 'Unauthorized' };
 
     const { data, error } = await supabase
       .from('media')
@@ -157,7 +157,7 @@ export async function deleteUserUpload(mediaId: string): Promise<ServerActionRes
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) throw new Error('Unauthorized');
+    if (!user) return { success: false, error: 'Unauthorized' };
 
     // Only allow deletion if the user actually uploaded it
     const { error } = await supabase
@@ -180,7 +180,7 @@ export async function getUserEvents(): Promise<ServerActionResponse<UserEventDat
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) throw new Error('Unauthorized');
+    if (!user) return { success: false, error: 'Unauthorized' };
 
     const { data, error } = await supabase
       .from('event_members')

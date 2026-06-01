@@ -11,6 +11,8 @@ import { User, Image as ImageIcon, Calendar, Settings, CheckCircle, Download, Tr
 import AvatarUpload from '@/components/profile/AvatarUpload';
 import FutureHooks from '@/components/profile/FutureHooks';
 import Image from 'next/image';
+import Link from 'next/link';
+import { Sparkles, BrainCircuit } from 'lucide-react';
 
 interface ProfileDashboardClientProps {
   profile: UserProfileData;
@@ -150,7 +152,43 @@ export default function ProfileDashboardClient({ profile, uploads, events }: Pro
               </Card>
             </div>
 
-            <FutureHooks />
+            <SectionHeader title="Intelligence Hub" subtitle="Explore your AI profile and platform analytics." className="mt-12" />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Link href="/profile/insights" className="block">
+                <Card className="p-6 border-white/5 hover:border-amber-500/30 transition-all hover:bg-slate-900/80 group h-full">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="p-4 bg-amber-500/10 text-amber-400 rounded-2xl group-hover:scale-110 group-hover:bg-amber-500/20 transition-all">
+                      <Sparkles className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white group-hover:text-amber-400 transition-colors">AI Insights</h3>
+                      <p className="text-sm text-slate-400 mt-1">View your personalized AI profile and engagement interests.</p>
+                    </div>
+                  </div>
+                </Card>
+              </Link>
+
+              {profile.role === 'admin' && (
+                <Link href="/admin/personalization" className="block">
+                  <Card className="p-6 border-white/5 hover:border-purple-500/30 transition-all hover:bg-slate-900/80 group h-full">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="p-4 bg-purple-500/10 text-purple-400 rounded-2xl group-hover:scale-110 group-hover:bg-purple-500/20 transition-all">
+                        <BrainCircuit className="w-8 h-8" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">Personalization Engine</h3>
+                        <p className="text-sm text-slate-400 mt-1">Admin dashboard for global recommendation metrics.</p>
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
+              )}
+            </div>
+
+            <div className="mt-12">
+              <FutureHooks />
+            </div>
           </TabsContent>
 
           {/* MY EVENTS TAB */}
@@ -159,7 +197,18 @@ export default function ProfileDashboardClient({ profile, uploads, events }: Pro
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {events.length === 0 ? (
-                <div className="col-span-full py-12 text-center text-slate-500">You haven&apos;t joined any events yet.</div>
+                <div className="col-span-full flex flex-col items-center justify-center py-16 px-4 text-center bg-slate-900/30 rounded-3xl border border-slate-800 border-dashed">
+                  <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                    <Calendar className="w-8 h-8 text-slate-500" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">No Events Yet</h3>
+                  <p className="text-slate-400 max-w-sm mb-6">
+                    You haven&apos;t joined or created any events. Discover public events or create your own!
+                  </p>
+                  <Button variant="gradient" onClick={() => window.location.href = '/events'}>
+                    Browse Events
+                  </Button>
+                </div>
               ) : (
                 events.map(event => (
                   <Card key={event.event_id} className="p-0 overflow-hidden border-white/5 flex flex-col hover:border-indigo-500/30 transition-colors">
@@ -173,7 +222,7 @@ export default function ProfileDashboardClient({ profile, uploads, events }: Pro
                       <h3 className="text-xl font-bold text-white mb-2">{event.events?.name}</h3>
                       <p className="text-sm text-slate-400 flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
-                        {event.events?.event_date ? new Date(event.events.event_date).toLocaleDateString() : 'TBA'}
+                        {event.events?.event_date ? new Date(event.events.event_date).toLocaleDateString('en-US') : 'TBA'}
                       </p>
                     </div>
                     <div className="p-4 bg-slate-900/50 border-t border-white/5 flex justify-end gap-2">
@@ -197,7 +246,15 @@ export default function ProfileDashboardClient({ profile, uploads, events }: Pro
             
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {uploads.length === 0 ? (
-                <div className="col-span-full py-12 text-center text-slate-500">You haven&apos;t uploaded any media yet.</div>
+                <div className="col-span-full flex flex-col items-center justify-center py-16 px-4 text-center bg-slate-900/30 rounded-3xl border border-slate-800 border-dashed">
+                  <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                    <ImageIcon className="w-8 h-8 text-slate-500" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">No Uploads Yet</h3>
+                  <p className="text-slate-400 max-w-sm">
+                    You haven&apos;t contributed any media to events yet. Your uploads will appear here.
+                  </p>
+                </div>
               ) : (
                 uploads.map(media => (
                   <div key={media.id} className="group relative aspect-square rounded-xl overflow-hidden bg-slate-900 border border-white/10">

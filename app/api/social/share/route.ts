@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { NotificationService } from '@/lib/services/NotificationService';
 
 export async function POST(request: Request) {
     const supabase = await createClient();
@@ -36,6 +37,26 @@ export async function POST(request: Request) {
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        const { data } = await supabase
+            .from('media')
+            .select('uploaded_by, title')
+            .eq('id', mediaId)
+            .single();
+
+        const mediaData = data as unknown as { uploaded_by: string; title: string | null };
+
+        if (mediaData && mediaData.uploaded_by && userId) {
+            const sharerName = session?.user?.user_metadata?.full_name || 'Someone';
+            await NotificationService.notifyShare(
+                mediaData.uploaded_by,
+                userId,
+                sharerName,
+                shareType,
+                mediaData.title || '',
+                mediaId
+            );
         }
 
         return NextResponse.json({ success: true });

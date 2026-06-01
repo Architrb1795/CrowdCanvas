@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { NotificationService } from '@/lib/services/NotificationService';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -86,6 +87,26 @@ export async function POST(request: Request) {
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        // Fetch media owner and title for notification
+        const { data: mediaDataRaw } = await supabase
+            .from('media')
+            .select('uploaded_by, title')
+            .eq('id', mediaId)
+            .single();
+
+        const mediaData = mediaDataRaw as unknown as { uploaded_by: string; title: string | null };
+
+        if (mediaData && mediaData.uploaded_by) {
+            const commenterName = session.user.user_metadata?.full_name || 'Someone';
+            await NotificationService.notifyComment(
+                mediaData.uploaded_by,
+                session.user.id,
+                commenterName,
+                mediaData.title || '',
+                mediaId
+            );
         }
 
         // Format similarly to GET

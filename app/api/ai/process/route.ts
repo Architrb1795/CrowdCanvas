@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { GoogleGenAI } from '@google/genai';
 import { logger } from '@/lib/logger';
+import { NotificationService } from '@/lib/services/NotificationService';
 
 // Initialize Supabase Admin Client to bypass RLS for background updates
 const supabaseAdmin = createClient(
@@ -103,6 +104,13 @@ Respond ONLY with the JSON object, without any markdown formatting.`;
     }).eq('id', mediaId);
 
     if (dbError) throw dbError;
+
+    // Fetch owner to notify
+    const { data } = await supabaseAdmin.from('media').select('uploaded_by').eq('id', mediaId).single();
+    const mediaOwner = data as unknown as { uploaded_by: string } | null;
+    if (mediaOwner && mediaOwner.uploaded_by) {
+        await NotificationService.notifyAIAnalysis(mediaOwner.uploaded_by, analysis.title, mediaId);
+    }
 
     return NextResponse.json({ success: true });
 

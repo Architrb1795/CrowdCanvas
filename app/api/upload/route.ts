@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { NotificationService } from '@/lib/services/NotificationService';
 
 export async function POST(request: Request) {
   try {
@@ -31,6 +32,18 @@ export async function POST(request: Request) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    if (data && data.id) {
+      await NotificationService.create({
+        userId: user.id,
+        category: 'media',
+        actionType: 'media_uploaded',
+        title: 'Media Uploaded',
+        description: 'Your media was uploaded successfully and is being processed.',
+        actionUrl: `/media?id=${data.id}`,
+        icon: 'upload-cloud'
+      });
     }
 
     return NextResponse.json({ data });

@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client';
 import { RecommendationCard } from './RecommendationCard';
 import MediaCommentsDrawer from './MediaCommentsDrawer';
 import MediaShareModal from './MediaShareModal';
+import MediaSocialBar from './MediaSocialBar';
 import { MediaSidePanel } from './MediaSidePanel';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
@@ -462,9 +463,30 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
                       {new Date(media.created_at).toLocaleDateString('en-US')}
                     </p>
                   </div>
-                  <div className="p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/40 transition-colors">
-                    <Maximize2 className="w-4 h-4" />
+                  <div className="flex flex-col gap-2 items-end">
+                    <div className="p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/40 transition-colors">
+                      <Maximize2 className="w-4 h-4" />
+                    </div>
                   </div>
+                </div>
+                
+                {/* Social Bar for quick interactions */}
+                <div 
+                  className="mt-3 flex justify-center" 
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MediaSocialBar
+                    mediaId={media.id}
+                    onCommentClick={() => {
+                      setSelectedMedia(media);
+                      setShowComments(true);
+                    }}
+                    onShareClick={() => {
+                      setSelectedMedia(media);
+                      setShowShare(true);
+                    }}
+                    className="bg-black/50 backdrop-blur-md rounded-full px-2 py-1 shadow-lg border border-white/10"
+                  />
                 </div>
               </div>
             )}

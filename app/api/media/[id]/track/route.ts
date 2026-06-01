@@ -36,18 +36,19 @@ export async function POST(
     const rawValue = media[incrementColumn as keyof typeof media];
     const currentValue = typeof rawValue === 'number' ? rawValue : 0;
     
-    const updateData = { [incrementColumn]: currentValue + 1 };
+    const updateData = { [incrementColumn]: currentValue + 1 } as { views_count?: number; shares_count?: number; downloads_count?: number };
     
     const { error: updateError } = await supabase
       .from('media')
-      .update(updateData as any)
+      .update(updateData)
       .eq('id', id);
 
     if (updateError) throw updateError;
 
     return NextResponse.json({ success: true, newValue: currentValue + 1 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error tracking media action:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

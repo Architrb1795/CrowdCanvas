@@ -358,7 +358,7 @@ export default function LandingPage() {
               <span className="text-2xl font-black text-white tracking-tight">CrowdCanvas</span>
             </Link>
             <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
-              The definitive platform for community memories. Stop digging through messy group chats and start finding exactly what you're looking for.
+              The definitive platform for community memories. Stop digging through messy group chats and start finding exactly what you&apos;re looking for.
             </p>
           </div>
           <div>

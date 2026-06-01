@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { type User as SupabaseUser } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -77,10 +78,7 @@ const Navbar = () => {
           <div className="hidden md:flex items-center gap-3">
             {user ? (
               <div className="flex items-center gap-3">
-                <button className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-full transition-colors relative">
-                  <Bell className="w-5 h-5" />
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-500 rounded-full border border-slate-950"></span>
-                </button>
+                <NotificationBell userId={user.id} />
                 <div className="h-6 w-px bg-slate-800 mx-1"></div>
                 
                 {/* Custom User Dropdown */}
@@ -151,9 +149,7 @@ const Navbar = () => {
           {/* Mobile Menu Toggle */}
           <div className="flex md:hidden items-center gap-2">
             {user && (
-              <button className="p-2 text-slate-400">
-                <Bell className="w-5 h-5" />
-              </button>
+              <NotificationBell userId={user.id} />
             )}
             <button
               onClick={() => setIsOpen(!isOpen)}

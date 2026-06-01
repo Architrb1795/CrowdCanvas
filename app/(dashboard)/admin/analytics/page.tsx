@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { BarChart3, TrendingUp, Users, Target, MousePointerClick, Eye, BrainCircuit } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, Target, MousePointerClick, Eye, BrainCircuit, Heart, MessageCircle, Share2, Activity } from 'lucide-react';
 
 interface CategoryStat {
     category: string;
@@ -19,6 +19,11 @@ interface AnalyticsData {
         ignored: number;
     };
     overallCtr: number;
+    social: {
+        likes: number;
+        comments: number;
+        shares: number;
+    };
     categories: CategoryStat[];
 }
 
@@ -61,6 +66,16 @@ export default function AdminAnalyticsPage() {
                 <MetricCard icon={<Eye />} title="Total Views" value={data.funnel.viewed.toLocaleString()} subtext="Cards entering viewport" color="text-blue-400" />
                 <MetricCard icon={<MousePointerClick />} title="Total Clicks" value={data.funnel.clicked.toLocaleString()} subtext="Successful conversions" color="text-purple-400" />
                 <MetricCard icon={<BarChart3 />} title="Generated" value={data.funnel.generated.toLocaleString()} subtext="Total candidates produced" color="text-indigo-400" />
+            </div>
+
+            {/* Social Metrics */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2"><Activity className="w-5 h-5 text-pink-400"/> Social Interactions</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <MetricCard icon={<Heart className="fill-current" />} title="Total Likes" value={data.social.likes.toLocaleString()} subtext="Across all media" color="text-pink-400" />
+                    <MetricCard icon={<MessageCircle />} title="Total Comments" value={data.social.comments.toLocaleString()} subtext="Across all media" color="text-sky-400" />
+                    <MetricCard icon={<Share2 />} title="Total Shares" value={data.social.shares.toLocaleString()} subtext="External platform shares" color="text-emerald-400" />
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

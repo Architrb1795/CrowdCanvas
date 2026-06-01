@@ -17,6 +17,8 @@ export interface MediaItem {
   uploader?: { full_name: string; avatar_url: string };
   event?: { name: string };
   ai_tags?: string[];
+  likes?: { count: number }[];
+  comments?: { count: number }[];
 }
 
 interface MediaGalleryProps {

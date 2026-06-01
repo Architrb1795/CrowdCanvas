@@ -19,6 +19,7 @@ export function FeatureCard({ icon: Icon, title, description, delay = 0 }: Featu
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.4, delay }}
+      whileHover={{ y: -5 }}
     >
       <Card className="h-full p-6 flex flex-col items-start hoverEffect group">
         <div className="rounded-xl bg-slate-800/80 p-3 mb-5 border border-slate-700/50 group-hover:border-indigo-500/50 group-hover:bg-indigo-500/10 transition-colors">

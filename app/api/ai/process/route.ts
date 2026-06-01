@@ -41,14 +41,17 @@ export async function POST(req: Request) {
 
     // 2. Call Gemini 2.5 Flash Vision
     const prompt = `Analyze this image in detail. Extract and generate the following information formatted strictly as a JSON object:
-- "caption": A highly detailed natural language caption describing the scene.
+- "title": A short catchy title for this media (2-5 words).
+- "caption": A highly concise, single-sentence summary of the media (maximum 15-20 words). Do not exceed 20 words.
 - "tags": Array of 10-20 descriptive tags.
 - "objects": Array of specific physical objects visible.
 - "ocrText": Any text visible in the image (posters, banners, signs). Empty string if none.
 - "sceneType": The type of scene (e.g. dance floor, stage performance, group photo, etc).
 - "mood": The overall mood or vibe (e.g. celebratory, professional, energetic).
+- "style": The visual style or aesthetic (e.g. futuristic, cinematic, vintage, minimalist).
 - "peopleCount": Integer estimate of people in the photo.
 - "dominantColors": Array of 2-4 dominant colors.
+- "confidence": Integer from 0 to 100 representing your confidence in this analysis.
 
 Respond ONLY with the JSON object, without any markdown formatting.`;
 
@@ -69,7 +72,7 @@ Respond ONLY with the JSON object, without any markdown formatting.`;
     const analysis = JSON.parse(text);
 
     // 3. Generate Embeddings for Semantic Search
-    const embedText = `Caption: ${analysis.caption}. Tags: ${analysis.tags.join(', ')}. Scene: ${analysis.sceneType}. OCR: ${analysis.ocrText}.`;
+    const embedText = `Title: ${analysis.title}. Caption: ${analysis.caption}. Tags: ${analysis.tags.join(', ')}. Scene: ${analysis.sceneType}. OCR: ${analysis.ocrText}. Style: ${analysis.style}.`;
     
     const embedResponse = await ai.models.embedContent({
         model: 'gemini-embedding-2',
@@ -82,14 +85,17 @@ Respond ONLY with the JSON object, without any markdown formatting.`;
 
     // 4. Update the Database
     const { error: dbError } = await supabaseAdmin.from('media').update({
+        title: analysis.title,
         ai_caption: analysis.caption,
         ai_tags: analysis.tags,
         ai_objects: analysis.objects,
         ocr_text: analysis.ocrText,
         scene_type: analysis.sceneType,
         mood: analysis.mood,
+        ai_style: analysis.style,
         people_count: analysis.peopleCount,
         dominant_colors: analysis.dominantColors,
+        ai_confidence: analysis.confidence,
         embedding: JSON.stringify(embedding),
         ai_processed: true,
         ai_processed_at: new Date().toISOString(),

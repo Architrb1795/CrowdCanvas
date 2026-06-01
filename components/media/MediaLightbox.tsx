@@ -6,6 +6,10 @@ import { X, ChevronLeft, ChevronRight, Download, Share2, Info, Sparkles } from '
 import type { MediaItem } from './MediaGallery';
 import { CldImage, CldVideoPlayer } from 'next-cloudinary';
 import { Button } from '@/components/ui/Button';
+import { MediaSidePanel } from './MediaSidePanel';
+import MediaCommentsDrawer from './MediaCommentsDrawer';
+import MediaShareModal from './MediaShareModal';
+import { createClient } from '@/lib/supabase/client';
 
 interface MediaLightboxProps {
   mediaList: MediaItem[];
@@ -16,6 +20,21 @@ interface MediaLightboxProps {
 export default function MediaLightbox({ mediaList, initialIndex, onClose }: MediaLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [showMetadata, setShowMetadata] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setCurrentUserId(session.user.id);
+      }
+    };
+    getUser();
+  }, [supabase.auth]);
 
   const currentMedia = mediaList[currentIndex];
 
@@ -57,15 +76,26 @@ export default function MediaLightbox({ mediaList, initialIndex, onClose }: Medi
             </div>
           </div>
           <div className="flex items-center gap-3 pointer-events-auto">
-            <Button variant="ghost" size="sm" onClick={() => setShowMetadata(!showMetadata)} className="text-slate-300">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => {
+                setShowMetadata(!showMetadata);
+                if (!showMetadata) setShowComments(false);
+              }} 
+              className={`text-slate-300 ${showMetadata ? 'bg-white/10 text-white' : ''}`}
+            >
               <Info className="w-5 h-5 mr-2" />
               Info
             </Button>
-            <Button variant="ghost" size="sm" className="text-slate-300">
-              <Share2 className="w-5 h-5 mr-2" />
-              Share
-            </Button>
-            <Button variant="primary" size="sm">
+            <Button variant="primary" size="sm" onClick={() => {
+              const a = document.createElement('a');
+              a.href = currentMedia.file_url;
+              a.download = `crowdcanvas-${currentMedia.id}.jpg`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+            }}>
               <Download className="w-5 h-5 mr-2" />
               Download
             </Button>
@@ -81,7 +111,7 @@ export default function MediaLightbox({ mediaList, initialIndex, onClose }: Medi
         </button>
 
         {/* Main Media Container */}
-        <div className={`flex-1 flex items-center justify-center p-16 transition-all duration-300 ${showMetadata ? 'mr-80' : ''}`}>
+        <div className={`flex-1 flex items-center justify-center p-16 transition-all duration-300 ${showMetadata || showComments ? 'mr-80' : ''}`}>
           <div className="relative w-full h-full flex items-center justify-center">
             {currentMedia.media_type === 'video' && currentMedia.cloudinary_public_id ? (
               <div className="w-full max-w-4xl max-h-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl border border-white/10">
@@ -117,69 +147,44 @@ export default function MediaLightbox({ mediaList, initialIndex, onClose }: Medi
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="absolute right-0 top-0 bottom-0 w-80 bg-slate-900 border-l border-white/10 p-6 flex flex-col overflow-y-auto z-20 shadow-2xl"
+              className="absolute right-0 top-0 bottom-0 z-20 shadow-2xl"
             >
-              <h3 className="text-lg font-bold text-white mb-6">Details</h3>
-              
-              <div className="space-y-6">
-                <div>
-                  <div className="text-xs text-slate-500 uppercase tracking-wider mb-1">Event</div>
-                  <div className="text-sm text-slate-200 font-medium">{currentMedia.event?.name || 'Unknown Event'}</div>
-                </div>
-
-                <div>
-                  <div className="text-xs text-slate-500 uppercase tracking-wider mb-1">Uploaded By</div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/50 flex items-center justify-center text-indigo-400 font-bold text-xs">
-                      {currentMedia.uploader?.full_name?.charAt(0) || 'U'}
-                    </div>
-                    <div className="text-sm text-slate-200 font-medium">{currentMedia.uploader?.full_name || 'Anonymous'}</div>
-                  </div>
-                </div>
-
-                <div className="pt-6 border-t border-white/10">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="w-4 h-4 text-violet-400" />
-                    <div className="text-sm font-bold text-violet-100">AI Analysis</div>
-                  </div>
-                  
-                  {currentMedia.ai_tags && currentMedia.ai_tags.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {currentMedia.ai_tags.map((tag, i) => (
-                        <span key={i} className="px-2.5 py-1 bg-violet-500/10 border border-violet-500/20 rounded-md text-xs font-semibold text-violet-300">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-xs text-slate-500 italic bg-slate-950 p-3 rounded-lg border border-white/5">
-                      Pending AI processing. Image tags and facial recognition vectors will appear here shortly.
-                    </div>
-                  )}
-                </div>
-
-                <div className="pt-6 border-t border-white/10">
-                  <div className="text-xs text-slate-500 uppercase tracking-wider mb-3">File Info</div>
-                  <div className="space-y-2 text-xs text-slate-400">
-                    <div className="flex justify-between">
-                      <span>Resolution</span>
-                      <span className="text-slate-200">{currentMedia.width || '?'} x {currentMedia.height || '?'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Type</span>
-                      <span className="text-slate-200 uppercase">{currentMedia.media_type}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Date</span>
-                      <span className="text-slate-200">{new Date(currentMedia.created_at).toLocaleDateString('en-US')}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <MediaSidePanel 
+                media={currentMedia}
+                currentUserId={currentUserId}
+                onCommentClick={() => {
+                  setShowComments(true);
+                  setShowMetadata(false);
+                }}
+                onShareClick={() => setShowShare(true)}
+                onDownload={() => {
+                  const a = document.createElement('a');
+                  a.href = currentMedia.file_url;
+                  a.download = `crowdcanvas-${currentMedia.id}.jpg`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                }}
+              />
             </motion.div>
           )}
         </AnimatePresence>
 
+        {/* Comments Drawer */}
+        <MediaCommentsDrawer 
+          mediaId={currentMedia.id}
+          isOpen={showComments}
+          onClose={() => setShowComments(false)}
+          currentUserId={currentUserId}
+        />
+
+        {/* Share Modal */}
+        <MediaShareModal 
+          mediaId={currentMedia.id}
+          mediaUrl={currentMedia.file_url}
+          isOpen={showShare}
+          onClose={() => setShowShare(false)}
+        />
       </motion.div>
     </AnimatePresence>
   );

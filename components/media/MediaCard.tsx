@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { CldImage } from 'next-cloudinary';
-import { Play, User, Calendar, Tag } from 'lucide-react';
+import { Play, User, Calendar, Tag, Heart, MessageCircle } from 'lucide-react';
 import type { MediaItem } from './MediaGallery';
 
 interface MediaCardProps {
@@ -71,19 +71,34 @@ export default function MediaCard({ item, onClick }: MediaCardProps) {
           </div>
         )}
 
-        {/* AI Tags Placeholder (Only show if tags exist, else hint) */}
-        <div className="flex items-center gap-2 overflow-hidden">
-          {item.ai_tags && item.ai_tags.length > 0 ? (
-            item.ai_tags.slice(0, 2).map((tag, i) => (
-              <span key={i} className="px-2 py-0.5 bg-indigo-500/30 border border-indigo-500/50 rounded-md text-[10px] font-bold text-indigo-200 whitespace-nowrap">
-                {tag}
+        {/* Social Metrics & Tags */}
+        <div className="flex items-center justify-between mt-auto">
+          {/* Tags */}
+          <div className="flex items-center gap-2 overflow-hidden">
+            {item.ai_tags && item.ai_tags.length > 0 ? (
+              item.ai_tags.slice(0, 2).map((tag, i) => (
+                <span key={i} className="px-2 py-0.5 bg-indigo-500/30 border border-indigo-500/50 rounded-md text-[10px] font-bold text-indigo-200 whitespace-nowrap">
+                  {tag}
+                </span>
+              ))
+            ) : (
+              <span className="px-2 py-0.5 bg-slate-800/80 border border-white/10 rounded-md text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                <Tag className="w-3 h-3" /> AI Unprocessed
               </span>
-            ))
-          ) : (
-            <span className="px-2 py-0.5 bg-slate-800/80 border border-white/10 rounded-md text-[10px] font-bold text-slate-400 flex items-center gap-1">
-              <Tag className="w-3 h-3" /> AI Unprocessed
-            </span>
-          )}
+            )}
+          </div>
+
+          {/* Social Counts */}
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-1 text-slate-300">
+              <Heart className="w-4 h-4" />
+              <span className="text-xs font-medium">{item.likes?.[0]?.count || 0}</span>
+            </div>
+            <div className="flex items-center gap-1 text-slate-300">
+              <MessageCircle className="w-4 h-4" />
+              <span className="text-xs font-medium">{item.comments?.[0]?.count || 0}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

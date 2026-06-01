@@ -16,6 +16,11 @@ export async function GET() {
 
         if (error) throw error;
 
+        // Fetch Social Counts
+        const { count: totalLikes } = await supabaseAdmin.from('likes').select('*', { count: 'exact', head: true });
+        const { count: totalComments } = await supabaseAdmin.from('comments').select('*', { count: 'exact', head: true });
+        const { count: totalShares } = await supabaseAdmin.from('shares').select('*', { count: 'exact', head: true });
+
         // Aggregate
         let totalGenerated = 0;
         let totalViewed = 0;
@@ -60,6 +65,11 @@ export async function GET() {
                 viewed: totalViewed,
                 clicked: totalClicked,
                 ignored: totalIgnored
+            },
+            social: {
+                likes: totalLikes || 0,
+                comments: totalComments || 0,
+                shares: totalShares || 0
             },
             overallCtr: parseFloat(overallCtr.toFixed(2)),
             categories

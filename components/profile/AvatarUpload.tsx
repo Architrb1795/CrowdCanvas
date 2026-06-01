@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { CldUploadWidget } from 'next-cloudinary';
 import { Camera, Loader2 } from 'lucide-react';
 import { updateAvatar } from '@/lib/actions/profile';
+import { useGlobalDialog } from '@/components/providers/GlobalDialogProvider';
 import Image from 'next/image';
 
 interface AvatarUploadProps {
@@ -14,6 +15,7 @@ interface AvatarUploadProps {
 
 export default function AvatarUpload({ currentAvatarUrl, fullName, size = 'lg' }: AvatarUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const { alert } = useGlobalDialog();
   const initials = fullName.substring(0, 2).toUpperCase() || '??';
 
   const sizeClasses = {
@@ -31,11 +33,11 @@ export default function AvatarUpload({ currentAvatarUrl, fullName, size = 'lg' }
       if (res.success) {
         window.location.reload();
       } else {
-        alert(res.error || 'Failed to update avatar in database.');
+        await alert(res.error || 'Failed to update avatar in database.');
       }
     } catch (err) {
       console.error(err);
-      alert('Upload failed.');
+      await alert('Upload failed.');
     } finally {
       setIsUploading(false);
     }

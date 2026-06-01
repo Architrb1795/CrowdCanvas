@@ -356,6 +356,7 @@ export interface Database {
           media_id: string | null
           content: string
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
@@ -363,6 +364,7 @@ export interface Database {
           media_id?: string | null
           content: string
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
@@ -370,6 +372,7 @@ export interface Database {
           media_id?: string | null
           content?: string
           created_at?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -388,6 +391,45 @@ export interface Database {
           }
         ]
       }
+      shares: {
+        Row: {
+          id: string
+          media_id: string | null
+          user_id: string | null
+          share_type: 'copy_link' | 'whatsapp' | 'twitter' | 'facebook' | 'download'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          media_id?: string | null
+          user_id?: string | null
+          share_type: 'copy_link' | 'whatsapp' | 'twitter' | 'facebook' | 'download'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          media_id?: string | null
+          user_id?: string | null
+          share_type?: 'copy_link' | 'whatsapp' | 'twitter' | 'facebook' | 'download'
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shares_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "media"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shares_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -398,6 +440,7 @@ export interface Database {
     Enums: {
       user_role: 'admin' | 'photographer' | 'member' | 'viewer'
       event_member_role: 'owner' | 'admin' | 'uploader' | 'viewer'
+      share_type_enum: 'copy_link' | 'whatsapp' | 'twitter' | 'facebook' | 'download'
     }
     CompositeTypes: {
       [_ in never]: never

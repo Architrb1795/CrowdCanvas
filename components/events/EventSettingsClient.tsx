@@ -5,6 +5,7 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { useGlobalDialog } from '@/components/providers/GlobalDialogProvider';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { Search, UserPlus, Shield, X, ShieldAlert, Star, Settings as SettingsIcon, AlertCircle, CheckCircle2, Calendar, FileText, Tag, Loader2, Key, Check } from 'lucide-react';
 import { EventMember, ProfileSearch, searchUsers, addEventMember, updateEventMemberRole, removeEventMember, transferOwnership, EventMemberRole } from '@/lib/actions/event_members';
@@ -24,6 +25,7 @@ interface EventSettingsClientProps {
 
 export default function EventSettingsClient({ eventId, event, initialMembers, initialRequests, currentUserRole, currentUserId }: EventSettingsClientProps) {
   const router = useRouter();
+  const { confirm, alert } = useGlobalDialog();
   const [activeTab, setActiveTab] = useState('general');
   const [members, setMembers] = useState<EventMember[]>(initialMembers);
   const [requests, setRequests] = useState<RoleRequest[]>(initialRequests);
@@ -88,7 +90,7 @@ export default function EventSettingsClient({ eventId, event, initialMembers, in
     if (res.success) {
       window.location.reload(); // Hard refresh to get updated server data
     } else {
-      alert(res.error);
+      await alert(res.error);
     }
     setLoadingAction(null);
   };
@@ -99,33 +101,35 @@ export default function EventSettingsClient({ eventId, event, initialMembers, in
     if (res.success) {
       setMembers(members.map(m => m.user_id === userId ? { ...m, role: newRole } : m));
     } else {
-      alert(res.error);
+      await alert(res.error);
     }
     setLoadingAction(null);
   };
 
   const handleRemoveMember = async (userId: string) => {
-    if (!confirm('Are you sure you want to remove this user from the event?')) return;
+    const confirmed = await confirm('Are you sure you want to remove this user from the event?');
+    if (!confirmed) return;
     
     setLoadingAction(`remove-${userId}`);
     const res = await removeEventMember(eventId, userId);
     if (res.success) {
       setMembers(members.filter(m => m.user_id !== userId));
     } else {
-      alert(res.error);
+      await alert(res.error);
     }
     setLoadingAction(null);
   };
 
   const handleTransferOwnership = async (userId: string) => {
-    if (!confirm('WARNING: Are you sure you want to transfer ownership? You will be downgraded to an Admin.')) return;
+    const confirmed = await confirm('WARNING: Are you sure you want to transfer ownership? You will be downgraded to an Admin.');
+    if (!confirmed) return;
     
     setLoadingAction(`transfer-${userId}`);
     const res = await transferOwnership(eventId, userId);
     if (res.success) {
       window.location.reload();
     } else {
-      alert(res.error);
+      await alert(res.error);
     }
     setLoadingAction(null);
   };
@@ -141,7 +145,7 @@ export default function EventSettingsClient({ eventId, event, initialMembers, in
         router.refresh();
       }
     } else {
-      alert(res.error);
+      await alert(res.error);
     }
     setLoadingAction(null);
   };

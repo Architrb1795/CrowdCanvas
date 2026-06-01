@@ -6,6 +6,7 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { useGlobalDialog } from '@/components/providers/GlobalDialogProvider';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { User, Image as ImageIcon, Calendar, Settings, CheckCircle, Download, Trash2, ShieldAlert } from 'lucide-react';
 import AvatarUpload from '@/components/profile/AvatarUpload';
@@ -22,6 +23,7 @@ interface ProfileDashboardClientProps {
 
 export default function ProfileDashboardClient({ profile, uploads, events }: ProfileDashboardClientProps) {
   const [activeTab, setActiveTab] = useState('overview');
+  const { confirm, alert } = useGlobalDialog();
   
   // Edit Profile State
   const [isEditing, setIsEditing] = useState(false);
@@ -36,18 +38,19 @@ export default function ProfileDashboardClient({ profile, uploads, events }: Pro
       setIsEditing(false);
       window.location.reload();
     } else {
-      alert(res.error || 'Failed to save profile');
+      await alert(res.error || 'Failed to save profile');
     }
     setIsSaving(false);
   };
 
   const handleDeleteUpload = async (mediaId: string) => {
-    if (!confirm('Are you sure you want to delete this media?')) return;
+    const confirmed = await confirm('Are you sure you want to delete this media?');
+    if (!confirmed) return;
     const res = await deleteUserUpload(mediaId);
     if (res.success) {
       window.location.reload();
     } else {
-      alert(res.error || 'Failed to delete upload');
+      await alert(res.error || 'Failed to delete upload');
     }
   };
 

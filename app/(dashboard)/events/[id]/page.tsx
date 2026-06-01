@@ -27,7 +27,7 @@ export default async function EventDetailPage(props: { params: Promise<{ id: str
   // Fetch Media for this event
   const { data: mediaItems } = await supabase
     .from('media')
-    .select('*, profiles(full_name)')
+    .select('*, profiles(full_name), likes(count), comments(count)')
     .eq('event_id', eventId)
     .order('created_at', { ascending: false });
 

@@ -161,8 +161,26 @@ CREATE TABLE comments (
     user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
     media_id UUID REFERENCES media(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TYPE share_type_enum AS ENUM ('copy_link', 'whatsapp', 'twitter', 'facebook', 'download');
+
+CREATE TABLE shares (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    media_id UUID REFERENCES media(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    share_type share_type_enum NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+CREATE INDEX idx_comments_media_id ON comments(media_id);
+CREATE INDEX idx_comments_user_id ON comments(user_id);
+CREATE INDEX idx_likes_media_id ON likes(media_id);
+CREATE INDEX idx_likes_user_id ON likes(user_id);
+CREATE INDEX idx_shares_media_id ON shares(media_id);
+CREATE INDEX idx_shares_user_id ON shares(user_id);
 
 -- ==========================================
 -- 4. ROW LEVEL SECURITY (RLS) POLICIES
@@ -175,6 +193,7 @@ ALTER TABLE event_role_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE media ENABLE ROW LEVEL SECURITY;
 ALTER TABLE likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shares ENABLE ROW LEVEL SECURITY;
 
 -- Profiles
 DROP POLICY IF EXISTS "Profiles are viewable by everyone" ON profiles;
@@ -265,8 +284,14 @@ DROP POLICY IF EXISTS "Users can delete their own comments" ON comments;
 
 CREATE POLICY "Anyone with media access can view likes" ON likes FOR SELECT USING (EXISTS (SELECT 1 FROM media WHERE media.id = likes.media_id));
 CREATE POLICY "Anyone with media access can view comments" ON comments FOR SELECT USING (EXISTS (SELECT 1 FROM media WHERE media.id = comments.media_id));
+CREATE POLICY "Anyone with media access can view shares" ON shares FOR SELECT USING (EXISTS (SELECT 1 FROM media WHERE media.id = shares.media_id));
+
 CREATE POLICY "Authenticated users can insert their own likes" ON likes FOR INSERT WITH CHECK (auth.role() = 'authenticated' AND auth.uid() = user_id);
 CREATE POLICY "Authenticated users can insert their own comments" ON comments FOR INSERT WITH CHECK (auth.role() = 'authenticated' AND auth.uid() = user_id);
+CREATE POLICY "Authenticated users can insert their own shares" ON shares FOR INSERT WITH CHECK (auth.role() = 'authenticated' AND auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own comments" ON comments FOR UPDATE USING (auth.uid() = user_id);
+
 CREATE POLICY "Users can delete their own likes" ON likes FOR DELETE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete their own comments" ON comments FOR DELETE USING (auth.uid() = user_id);
 
@@ -276,6 +301,7 @@ CREATE POLICY "Users can delete their own comments" ON comments FOR DELETE USING
 
 ALTER PUBLICATION supabase_realtime ADD TABLE likes;
 ALTER PUBLICATION supabase_realtime ADD TABLE comments;
+ALTER PUBLICATION supabase_realtime ADD TABLE shares;
 ALTER PUBLICATION supabase_realtime ADD TABLE event_members;
 ALTER PUBLICATION supabase_realtime ADD TABLE event_role_requests;
 

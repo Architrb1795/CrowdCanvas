@@ -42,7 +42,17 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     return notifications.filter(n => {
       if (activeTab === 'all') return true;
       if (activeTab === 'unread') return !n.is_read;
-      return n.category === activeTab;
+      
+      // Infer category from category or type
+      let category = n.category;
+      if (!category) {
+        const typeStr = n.type || n.action_type || '';
+        category = ['tag_request', 'tag_approved', 'photo_saved', 'like', 'comment', 'share'].includes(typeStr) 
+          ? 'social' 
+          : 'system';
+      }
+        
+      return category === activeTab;
     });
   }, [notifications, activeTab]);
 

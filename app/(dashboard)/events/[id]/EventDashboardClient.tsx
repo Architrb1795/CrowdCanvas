@@ -24,7 +24,23 @@ function TabButton({ active, onClick, icon: Icon, label }: any) {
   );
 }
 
-export default function EventDashboardClient({ event, mediaItems, canManageEvent, currentUserId }: any) {
+interface EventDashboardClientProps {
+   
+  event: any;
+   
+  mediaItems: any[];
+  canManageEvent: boolean;
+  currentUserId?: string;
+  watermarkedDownloadsCount?: number;
+}
+
+export default function EventDashboardClient({ 
+  event, 
+  mediaItems, 
+  canManageEvent,
+  currentUserId,
+  watermarkedDownloadsCount = 0
+}: EventDashboardClientProps) {
   const [activeTab, setActiveTab] = useState('gallery');
   const [isGenerating, setIsGenerating] = useState(false);
   const router = useRouter();
@@ -230,7 +246,7 @@ export default function EventDashboardClient({ event, mediaItems, canManageEvent
 
       {activeTab === 'analytics' && (
         <div className="animate-in fade-in duration-300">
-          <AnalyticsDashboard mediaItems={mediaItems} />
+          <AnalyticsDashboard mediaItems={mediaItems} watermarkedDownloadsCount={watermarkedDownloadsCount} />
         </div>
       )}
     </div>

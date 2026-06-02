@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Menu, X, User, Bell, Sparkles, Image as ImageIcon, Calendar, UploadCloud, Info, Settings, BrainCircuit } from 'lucide-react';
+import { Home, User, Settings, Image as ImageIcon, Menu, X, Users, MessageSquare, Sparkles, Calendar, UploadCloud, Info, BrainCircuit } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { type User as SupabaseUser } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/Button';

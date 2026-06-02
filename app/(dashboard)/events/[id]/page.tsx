@@ -31,6 +31,18 @@ export default async function EventDetailPage(props: { params: Promise<{ id: str
     .eq('event_id', eventId)
     .order('created_at', { ascending: false });
 
+  // Fetch Watermarked Downloads Count
+  let watermarkedDownloadsCount = 0;
+  if (mediaItems && mediaItems.length > 0) {
+    const { count } = await supabase
+      .from('shares')
+      .select('*', { count: 'exact', head: true })
+      .eq('share_type', 'download')
+      .eq('is_watermarked', true)
+      .in('media_id', mediaItems.map(m => m.id));
+    watermarkedDownloadsCount = count || 0;
+  }
+
   // Verify access (Public or Member)
   let hasAccess = event.is_public;
   let memberRole = null;
@@ -69,6 +81,7 @@ export default async function EventDetailPage(props: { params: Promise<{ id: str
         mediaItems={mediaItems || []} 
         canManageEvent={canManageEvent} 
         currentUserId={user?.id}
+        watermarkedDownloadsCount={watermarkedDownloadsCount}
       />
     </main>
   );

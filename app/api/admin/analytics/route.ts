@@ -20,6 +20,12 @@ export async function GET() {
         const { count: totalLikes } = await supabaseAdmin.from('likes').select('*', { count: 'exact', head: true });
         const { count: totalComments } = await supabaseAdmin.from('comments').select('*', { count: 'exact', head: true });
         const { count: totalShares } = await supabaseAdmin.from('shares').select('*', { count: 'exact', head: true });
+        const { count: totalFavourites } = await supabaseAdmin.from('media_favourites').select('*', { count: 'exact', head: true });
+        
+        // Tags
+        const { count: totalTags } = await supabaseAdmin.from('photo_user_tags').select('*', { count: 'exact', head: true });
+        const { count: totalAcceptedTags } = await supabaseAdmin.from('photo_user_tags').select('*', { count: 'exact', head: true }).eq('status', 'approved');
+        const { count: totalRejectedTags } = await supabaseAdmin.from('photo_user_tags').select('*', { count: 'exact', head: true }).eq('status', 'rejected');
 
         // Aggregate
         let totalGenerated = 0;
@@ -69,7 +75,13 @@ export async function GET() {
             social: {
                 likes: totalLikes || 0,
                 comments: totalComments || 0,
-                shares: totalShares || 0
+                shares: totalShares || 0,
+                favourites: totalFavourites || 0
+            },
+            tags: {
+                total: totalTags || 0,
+                accepted: totalAcceptedTags || 0,
+                rejected: totalRejectedTags || 0
             },
             overallCtr: parseFloat(overallCtr.toFixed(2)),
             categories

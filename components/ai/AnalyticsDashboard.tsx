@@ -7,13 +7,14 @@ import {
   AreaChart, Area, CartesianGrid, RadarChart, PolarGrid, 
   PolarAngleAxis, PolarRadiusAxis, Radar, Cell 
 } from 'recharts';
-import { Camera, Heart, Eye, HardDrive, Sparkles, User, Video, Image as ImageIcon } from 'lucide-react';
+import { Camera, Heart, Eye, HardDrive, Sparkles, User, Video, Image as ImageIcon, ShieldCheck } from 'lucide-react';
 
 interface AnalyticsDashboardProps {
   mediaItems: any[];
+  watermarkedDownloadsCount?: number;
 }
 
-export default function AnalyticsDashboard({ mediaItems }: AnalyticsDashboardProps) {
+export default function AnalyticsDashboard({ mediaItems, watermarkedDownloadsCount = 0 }: AnalyticsDashboardProps) {
   const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f43f5e'];
 
   // --- Data Processing ---
@@ -202,6 +203,18 @@ export default function AnalyticsDashboard({ mediaItems }: AnalyticsDashboardPro
           </div>
           <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center text-amber-400">
             <HardDrive className="w-6 h-6" />
+          </div>
+        </div>
+        
+        {/* Watermarked Downloads */}
+        <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-900/10 border border-emerald-500/20 rounded-2xl p-5 flex items-center justify-between shadow-lg backdrop-blur-sm">
+          <div>
+            <p className="text-emerald-400 text-sm font-medium mb-1">Watermarked Downloads</p>
+            <h3 className="text-3xl font-bold text-white">{watermarkedDownloadsCount}</h3>
+            <p className="text-xs text-emerald-300/70 mt-2 font-medium">Protected Media</p>
+          </div>
+          <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center text-emerald-400">
+            <ShieldCheck className="w-6 h-6" />
           </div>
         </div>
       </div>

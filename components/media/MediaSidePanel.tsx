@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Heart, MessageCircle, Share2, Trash2, Edit2, Download, 
-  Lock, Globe, Sparkles, FileType, User, ChevronDown, Eye, Maximize2
+  Lock, Globe, Sparkles, FileType, User, ChevronDown, Eye, Maximize2, Bookmark, Tag
 } from 'lucide-react';
 
 const formatBytes = (bytes?: number) => {
@@ -31,6 +31,8 @@ export interface MediaSidePanelProps {
   onShareClick?: () => void;
   onGenerateAI?: () => void;
   isGeneratingAI?: boolean;
+  onTagClick?: () => void;
+  isTaggingMode?: boolean;
   bottomContent?: React.ReactNode;
 }
 
@@ -47,6 +49,8 @@ export function MediaSidePanel({
   onShareClick,
   onGenerateAI,
   isGeneratingAI,
+  onTagClick,
+  isTaggingMode,
   bottomContent
 }: MediaSidePanelProps) {
   const [likesCount, setLikesCount] = useState(0);
@@ -54,8 +58,12 @@ export function MediaSidePanel({
   const [commentsCount, setCommentsCount] = useState(0);
   const [isLiking, setIsLiking] = useState(false);
   const [showFileDetails, setShowFileDetails] = useState(false);
-  const [showFullAnalysis, setShowFullAnalysis] = useState(false);
   const [showAllTags, setShowAllTags] = useState(false);
+  const [showFullAnalysis, setShowFullAnalysis] = useState(false);
+  
+  // Favourites state
+  const [hasFavourited, setHasFavourited] = useState(false);
+  const [isFavouriting, setIsFavouriting] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -75,6 +83,11 @@ export function MediaSidePanel({
           if (isMounted) {
             setCommentsCount(commentData.comments?.length || 0);
           }
+        }
+        const favRes = await fetch(`/api/social/favourite?mediaId=${media.id}`);
+        if (favRes.ok) {
+          const favData = await favRes.json();
+          if (isMounted) setHasFavourited(favData.hasFavourited || false);
         }
       } catch (error) {
         console.error("Failed to fetch social data", error);
@@ -108,6 +121,27 @@ export function MediaSidePanel({
     }
   };
 
+  const handleFavouriteToggle = async () => {
+    if (isFavouriting) return;
+    setIsFavouriting(true);
+    const previousHasFavourited = hasFavourited;
+    setHasFavourited(!hasFavourited);
+
+    try {
+      const method = hasFavourited ? 'DELETE' : 'POST';
+      const res = await fetch(`/api/social/favourite${hasFavourited ? `?mediaId=${media.id}` : ''}`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: hasFavourited ? undefined : JSON.stringify({ mediaId: media.id })
+      });
+      if (!res.ok) throw new Error('Failed to toggle favourite');
+    } catch (error) {
+      setHasFavourited(previousHasFavourited);
+    } finally {
+      setIsFavouriting(false);
+    }
+  };
+
   const visibleTags = media.ai_tags || [];
   const tagsToShow = showAllTags ? visibleTags : visibleTags.slice(0, 6);
   const uploaderName = media.profiles?.full_name || media.uploader?.full_name || 'Anonymous User';
@@ -118,33 +152,45 @@ export function MediaSidePanel({
       <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full min-h-0 p-5 space-y-6">
         
         {/* SECTION 1: Quick Actions */}
-        <section className="grid grid-cols-3 gap-3">
+        <section className="grid grid-cols-4 gap-2">
           <button 
             onClick={handleLikeToggle}
-            className={`flex flex-col items-center justify-center p-4 rounded-2xl transition-all group ${
+            className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all group ${
               hasLiked ? 'bg-gradient-to-b from-rose-500/20 to-rose-500/5 text-rose-500 border border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.1)]' : 'bg-slate-800/50 hover:bg-slate-800 text-slate-300 border border-white/5'
             }`}
           >
             <motion.div whileTap={{ scale: 0.8 }} animate={{ scale: hasLiked ? [1, 1.2, 1] : 1 }}>
-              <Heart className={`w-7 h-7 mb-2 group-hover:scale-110 transition-transform ${hasLiked ? 'fill-current drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]' : ''}`} />
+              <Heart className={`w-5 h-5 mb-1.5 group-hover:scale-110 transition-transform ${hasLiked ? 'fill-current drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]' : ''}`} />
             </motion.div>
-            <span className="text-sm font-bold tracking-wide">{likesCount}</span>
+            <span className="text-[11px] font-bold tracking-wide">{likesCount}</span>
+          </button>
+
+          <button 
+            onClick={handleFavouriteToggle}
+            className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all group ${
+              hasFavourited ? 'bg-gradient-to-b from-amber-500/20 to-amber-500/5 text-amber-500 border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]' : 'bg-slate-800/50 hover:bg-slate-800 text-slate-300 border border-white/5'
+            }`}
+          >
+            <motion.div whileTap={{ scale: 0.8 }} animate={{ scale: hasFavourited ? [1, 1.2, 1] : 1 }}>
+              <Bookmark className={`w-5 h-5 mb-1.5 group-hover:scale-110 transition-transform ${hasFavourited ? 'fill-current drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]' : ''}`} />
+            </motion.div>
+            <span className="text-[11px] font-bold tracking-wide">Save</span>
           </button>
 
           <button 
             onClick={onCommentClick}
-            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-800/50 hover:bg-slate-800 text-slate-300 border border-white/5 transition-all group"
+            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-800/50 hover:bg-slate-800 text-slate-300 border border-white/5 transition-all group"
           >
-            <MessageCircle className="w-7 h-7 mb-2 group-hover:scale-110 transition-transform" />
-            <span className="text-sm font-bold tracking-wide">{commentsCount}</span>
+            <MessageCircle className="w-5 h-5 mb-1.5 group-hover:scale-110 transition-transform" />
+            <span className="text-[11px] font-bold tracking-wide">{commentsCount}</span>
           </button>
 
           <button 
             onClick={onShareClick}
-            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-800/50 hover:bg-slate-800 text-slate-300 border border-white/5 transition-all group"
+            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-800/50 hover:bg-slate-800 text-slate-300 border border-white/5 transition-all group"
           >
-            <Share2 className="w-7 h-7 mb-2 group-hover:scale-110 transition-transform" />
-            <span className="text-sm font-bold tracking-wide">Share</span>
+            <Share2 className="w-5 h-5 mb-1.5 group-hover:scale-110 transition-transform" />
+            <span className="text-[11px] font-bold tracking-wide">Share</span>
           </button>
         </section>
 
@@ -373,7 +419,24 @@ export function MediaSidePanel({
           </div>
         )}
 
-        {/* SECTION 8: Danger Zone */}
+        {/* SECTION 8: Social Actions */}
+        {media.media_type === 'photo' && onTagClick && (
+          <section className="pt-4 mt-4 border-t border-white/5 space-y-2">
+            <button 
+              onClick={onTagClick}
+              className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold transition-all border ${
+                isTaggingMode 
+                  ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' 
+                  : 'bg-slate-800/50 hover:bg-slate-800 text-slate-300 border-white/5 hover:border-white/10'
+              }`}
+            >
+              <Tag className="w-4 h-4" />
+              {isTaggingMode ? 'Finish Tagging' : 'Tag Friends'}
+            </button>
+          </section>
+        )}
+
+        {/* SECTION 9: Danger Zone & Tools */}
         {canEditOrDelete && (
           <section className="pt-4 mt-4 border-t border-white/5 space-y-2">
             {onDownload && (

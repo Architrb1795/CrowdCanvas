@@ -13,15 +13,19 @@ import AvatarUpload from '@/components/profile/AvatarUpload';
 import FutureHooks from '@/components/profile/FutureHooks';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Sparkles, BrainCircuit } from 'lucide-react';
+import { Sparkles, BrainCircuit, Bookmark, Tag } from 'lucide-react';
+import { FaceRecognitionHub } from '@/components/faces/FaceRecognitionHub';
+import PrivacySettingsForm from '@/components/profile/PrivacySettingsForm';
 
 interface ProfileDashboardClientProps {
   profile: UserProfileData;
   uploads: UserUploadData[];
   events: UserEventData[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  faceProfile: any;
 }
 
-export default function ProfileDashboardClient({ profile, uploads, events }: ProfileDashboardClientProps) {
+export default function ProfileDashboardClient({ profile, uploads, events, faceProfile }: ProfileDashboardClientProps) {
   const [activeTab, setActiveTab] = useState('overview');
   const { confirm, alert } = useGlobalDialog();
   
@@ -116,6 +120,10 @@ export default function ProfileDashboardClient({ profile, uploads, events }: Pro
         <div className="mt-8">
           {/* OVERVIEW TAB */}
           <TabsContent value="overview" className="space-y-6">
+            <div className="mb-8">
+              <FaceRecognitionHub initialProfile={faceProfile} />
+            </div>
+
             <SectionHeader title="Dashboard Overview" subtitle="A summary of your activity across CrowdCanvas." />
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -153,6 +161,30 @@ export default function ProfileDashboardClient({ profile, uploads, events }: Pro
                   {new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </div>
               </Card>
+
+              <Link href="/profile/favourites">
+                <Card className="p-6 border-white/5 hover:border-amber-500/30 transition-colors group h-full">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-3 bg-amber-500/20 text-amber-400 rounded-xl group-hover:scale-110 transition-transform"><Bookmark className="w-6 h-6" /></div>
+                    <div>
+                      <h3 className="text-lg font-bold text-white group-hover:text-amber-400 transition-colors">My Favourites</h3>
+                      <p className="text-sm text-slate-400">Photos you saved</p>
+                    </div>
+                  </div>
+                </Card>
+              </Link>
+
+              <Link href="/profile/tags">
+                <Card className="p-6 border-white/5 hover:border-blue-500/30 transition-colors group h-full">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-3 bg-blue-500/20 text-blue-400 rounded-xl group-hover:scale-110 transition-transform"><Tag className="w-6 h-6" /></div>
+                    <div>
+                      <h3 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">Photos of Me</h3>
+                      <p className="text-sm text-slate-400">Tagged & matched photos</p>
+                    </div>
+                  </div>
+                </Card>
+              </Link>
             </div>
 
             <SectionHeader title="Intelligence Hub" subtitle="Explore your AI profile and platform analytics." className="mt-12" />
@@ -341,6 +373,11 @@ export default function ProfileDashboardClient({ profile, uploads, events }: Pro
                   )}
                 </div>
               </div>
+            </Card>
+
+            <SectionHeader title="Privacy & Tags" subtitle="Manage how others interact with you." className="mt-12" />
+            <Card className="p-6 md:p-8 border-white/5 max-w-2xl">
+              <PrivacySettingsForm />
             </Card>
 
             <SectionHeader title="Danger Zone" subtitle="Irreversible account actions." className="mt-12" />

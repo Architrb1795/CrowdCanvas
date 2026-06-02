@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-/* eslint-disable react-hooks/exhaustive-deps */
+ 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable react-hooks/rules-of-hooks */
+ 
 'use client';
 
 import React, { useState, useTransition, useEffect } from 'react';
@@ -14,13 +14,15 @@ import MediaCommentsDrawer from './MediaCommentsDrawer';
 import MediaShareModal from './MediaShareModal';
 import MediaSocialBar from './MediaSocialBar';
 import { MediaSidePanel } from './MediaSidePanel';
+import PhotoTaggingOverlay from './PhotoTaggingOverlay';
+import { triggerSecureDownload } from '@/lib/utils/download';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUserId }: { mediaItems: any[], canManageEvent?: boolean, currentUserId?: string }) {
   const router = useRouter();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const [selectedMedia, setSelectedMedia] = useState<any | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editFilter, setEditFilter] = useState<string>('');
@@ -35,7 +37,9 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
   // Social State
   const [showComments, setShowComments] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [isTaggingMode, setIsTaggingMode] = useState(false);
   
+
   // Dialog State
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
@@ -156,26 +160,9 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
     });
   };
 
-  const handleDownload = (e: React.MouseEvent, url: string, filename: string) => {
+  const handleDownload = async (e: React.MouseEvent, url: string, filename: string, mediaId: string) => {
     e.stopPropagation();
-    fetch(url)
-      .then(response => response.blob())
-      .then(blob => {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      });
-      
-    if (selectedMedia) {
-      fetch(`/api/media/${selectedMedia.id}/track`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'download' })
-      }).catch(console.error);
-    }
+    await triggerSecureDownload(mediaId, url);
   };
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -561,12 +548,22 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
                   className="max-w-full max-h-[80vh] md:max-h-full object-contain"
                 />
               ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img 
-                  src={currentPreviewUrl} 
-                  alt="Full resolution media" 
-                  className="max-w-full max-h-[80vh] md:max-h-full object-contain transition-all duration-300"
-                />
+                <div className="relative inline-flex max-w-full max-h-[80vh] md:max-h-full shadow-2xl rounded-sm overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img 
+                    src={currentPreviewUrl} 
+                    alt="Full resolution media" 
+                    className="max-w-full max-h-[80vh] md:max-h-full w-auto h-auto object-contain transition-all duration-300"
+                  />
+                  {selectedMedia.media_type === 'photo' && (
+                    <PhotoTaggingOverlay
+                      mediaId={selectedMedia.id}
+                      isTaggingMode={isTaggingMode}
+                      onTaggingComplete={() => setIsTaggingMode(false)}
+                      currentUserId={currentUserId || null}
+                    />
+                  )}
+                </div>
               )}
             </div>
 
@@ -615,7 +612,9 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
                   onShareClick={() => setShowShare(true)}
                   onGenerateAI={handleGenerateImageAI}
                   isGeneratingAI={isGeneratingAI}
-                  onDownload={handleDownload}
+                  onTagClick={() => setIsTaggingMode(!isTaggingMode)}
+                  isTaggingMode={isTaggingMode}
+                  onDownload={(e, url, file) => handleDownload(e, url, file, selectedMedia.id)}
                   bottomContent={
                     <div className="mt-2">
                       <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">AI Similar Photos</h4>

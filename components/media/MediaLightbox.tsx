@@ -4,11 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, Download, Share2, Info, Sparkles } from 'lucide-react';
 import type { MediaItem } from './MediaGallery';
+import { triggerSecureDownload } from '@/lib/utils/download';
 import { CldImage, CldVideoPlayer } from 'next-cloudinary';
 import { Button } from '@/components/ui/Button';
 import { MediaSidePanel } from './MediaSidePanel';
 import MediaCommentsDrawer from './MediaCommentsDrawer';
 import MediaShareModal from './MediaShareModal';
+import PhotoTaggingOverlay from './PhotoTaggingOverlay';
 import { createClient } from '@/lib/supabase/client';
 
 interface MediaLightboxProps {
@@ -22,6 +24,7 @@ export default function MediaLightbox({ mediaList, initialIndex, onClose }: Medi
   const [showMetadata, setShowMetadata] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [isTaggingMode, setIsTaggingMode] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const supabase = createClient();
@@ -88,14 +91,7 @@ export default function MediaLightbox({ mediaList, initialIndex, onClose }: Medi
               <Info className="w-5 h-5 mr-2" />
               Info
             </Button>
-            <Button variant="primary" size="sm" onClick={() => {
-              const a = document.createElement('a');
-              a.href = currentMedia.file_url;
-              a.download = `crowdcanvas-${currentMedia.id}.jpg`;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-            }}>
+            <Button variant="primary" size="sm" onClick={() => triggerSecureDownload(currentMedia.id, currentMedia.file_url)}>
               <Download className="w-5 h-5 mr-2" />
               Download
             </Button>
@@ -133,8 +129,16 @@ export default function MediaLightbox({ mediaList, initialIndex, onClose }: Medi
                 quality={100}
               />
             ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={currentMedia.file_url} className="max-w-full max-h-full object-contain" alt="Fullscreen" />
+              <img src={currentMedia.file_url} className="max-w-full max-h-full object-contain pointer-events-auto relative z-0" alt="Fullscreen" />
+            )}
+
+            {currentMedia.media_type === 'photo' && (
+              <PhotoTaggingOverlay
+                mediaId={currentMedia.id}
+                isTaggingMode={isTaggingMode}
+                onTaggingComplete={() => setIsTaggingMode(false)}
+                currentUserId={currentUserId}
+              />
             )}
           </div>
         </div>
@@ -157,14 +161,9 @@ export default function MediaLightbox({ mediaList, initialIndex, onClose }: Medi
                   setShowMetadata(false);
                 }}
                 onShareClick={() => setShowShare(true)}
-                onDownload={() => {
-                  const a = document.createElement('a');
-                  a.href = currentMedia.file_url;
-                  a.download = `crowdcanvas-${currentMedia.id}.jpg`;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                }}
+                onDownload={() => triggerSecureDownload(currentMedia.id, currentMedia.file_url)}
+                onTagClick={() => setIsTaggingMode(!isTaggingMode)}
+                isTaggingMode={isTaggingMode}
               />
             </motion.div>
           )}

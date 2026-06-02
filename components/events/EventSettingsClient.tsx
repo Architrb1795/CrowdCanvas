@@ -7,9 +7,9 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useGlobalDialog } from '@/components/providers/GlobalDialogProvider';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
-import { Search, UserPlus, Shield, X, ShieldAlert, Star, Settings as SettingsIcon, AlertCircle, CheckCircle2, Calendar, FileText, Tag, Loader2, Key, Check } from 'lucide-react';
+import { Search, UserPlus, Shield, X, ShieldAlert, Star, Settings as SettingsIcon, AlertCircle, CheckCircle2, Calendar, FileText, Tag, Loader2, Key, Check, Droplets } from 'lucide-react';
 import { EventMember, ProfileSearch, searchUsers, addEventMember, updateEventMemberRole, removeEventMember, transferOwnership, EventMemberRole } from '@/lib/actions/event_members';
-import { updateEventDetails } from '@/lib/actions/events';
+import { updateEventDetails, updateEventWatermark } from '@/lib/actions/events';
 import { resolveRoleRequest, RoleRequest } from '@/lib/actions/role_requests';
 import { useRouter } from 'next/navigation';
 
@@ -44,6 +44,56 @@ export default function EventSettingsClient({ eventId, event, initialMembers, in
   const [isSubmittingGeneral, setIsSubmittingGeneral] = useState(false);
   const [generalError, setGeneralError] = useState('');
   const [generalSuccess, setGeneralSuccess] = useState('');
+
+  // Watermark Settings State
+  const [watermarkEnabled, setWatermarkEnabled] = useState(event.watermark_enabled ?? false);
+  const [watermarkText, setWatermarkText] = useState(event.watermark_text || '');
+  const [watermarkStyle, setWatermarkStyle] = useState(event.watermark_style || 'bottom_right');
+  const [watermarkOpacity, setWatermarkOpacity] = useState(event.watermark_opacity ?? 50);
+  const [watermarkSize, setWatermarkSize] = useState(event.watermark_size ?? 40);
+
+  const [isSubmittingWatermark, setIsSubmittingWatermark] = useState(false);
+  const [watermarkError, setWatermarkError] = useState('');
+  const [watermarkSuccess, setWatermarkSuccess] = useState('');
+
+  // Sync state with props on server refresh
+  React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setName(event.name || '');
+    setDescription(event.description || '');
+    setEventDate(event.event_date ? new Date(event.event_date).toISOString().slice(0, 16) : '');
+    setCategory(event.category || 'workshop');
+    setIsPublic(event.is_public ?? true);
+
+    setWatermarkEnabled(event.watermark_enabled ?? false);
+    setWatermarkText(event.watermark_text || '');
+    setWatermarkStyle(event.watermark_style || 'bottom_right');
+    setWatermarkOpacity(event.watermark_opacity ?? 50);
+    setWatermarkSize(event.watermark_size ?? 40);
+  }, [event]);
+
+  const handleUpdateWatermark = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWatermarkError('');
+    setWatermarkSuccess('');
+    setIsSubmittingWatermark(true);
+
+    const formData = new FormData();
+    formData.append('watermark_enabled', String(watermarkEnabled));
+    formData.append('watermark_text', watermarkText);
+    formData.append('watermark_style', watermarkStyle);
+    formData.append('watermark_opacity', String(watermarkOpacity));
+    formData.append('watermark_size', String(watermarkSize));
+
+    const res = await updateEventWatermark(eventId, formData);
+    if (res.success) {
+      setWatermarkSuccess('Watermark settings updated successfully.');
+      router.refresh();
+    } else {
+      setWatermarkError(res.error || 'Failed to update watermark settings.');
+    }
+    setIsSubmittingWatermark(false);
+  };
 
   const handleUpdateGeneral = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,6 +227,10 @@ export default function EventSettingsClient({ eventId, event, initialMembers, in
                 {requests.length}
               </span>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="watermark" className="flex items-center gap-2 px-4 py-2 text-sm">
+            <Droplets className="w-4 h-4" />
+            Watermarks
           </TabsTrigger>
         </TabsList>
 
@@ -504,6 +558,140 @@ export default function EventSettingsClient({ eventId, event, initialMembers, in
                 ))}
               </div>
             )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="watermark">
+          <Card className="max-w-3xl p-6 border-white/5 space-y-6">
+            <div className="border-b border-white/5 pb-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Droplets className="w-5 h-5 text-indigo-400" />
+                Dynamic Watermarks
+              </h3>
+              <p className="text-sm text-slate-400 mt-1">Configure intelligent watermarking to protect your event media.</p>
+            </div>
+
+            <form onSubmit={handleUpdateWatermark} className="space-y-6">
+              {watermarkError && (
+                <div className="flex gap-2.5 p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-sm font-semibold animate-shake">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <span>{watermarkError}</span>
+                </div>
+              )}
+              {watermarkSuccess && (
+                <div className="flex gap-2.5 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-sm font-semibold animate-fade-in">
+                  <CheckCircle2 className="w-5 h-5 shrink-0" />
+                  <span>{watermarkSuccess}</span>
+                </div>
+              )}
+
+              <div className="bg-slate-900 border border-white/5 rounded-xl p-4 flex items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 text-slate-400 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-bold text-white">Enable Watermarking</h4>
+                    <p className="text-xs text-slate-400 max-w-[320px]">
+                      Automatically apply watermarks when users download media. Owners and admins get smaller watermarks, while viewers get larger ones.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setWatermarkEnabled(!watermarkEnabled)}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    watermarkEnabled ? 'bg-indigo-600' : 'bg-slate-700'
+                  }`}
+                  role="switch"
+                  aria-checked={watermarkEnabled}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      watermarkEnabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {watermarkEnabled && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="space-y-1.5">
+                    <label htmlFor="watermark-text" className="text-sm font-bold text-slate-300">
+                      Watermark Text
+                    </label>
+                    <input
+                      id="watermark-text"
+                      type="text"
+                      value={watermarkText}
+                      onChange={(e) => setWatermarkText(e.target.value)}
+                      placeholder="e.g. CrowdCanvas, {username}"
+                      className="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl text-sm text-slate-200 outline-none"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Use <code className="bg-slate-900 px-1 py-0.5 rounded text-indigo-300">{"{username}"}</code> to dynamically insert the downloader&apos;s name.</p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label htmlFor="watermark-style" className="text-sm font-bold text-slate-300">
+                      Watermark Style
+                    </label>
+                    <select
+                      id="watermark-style"
+                      value={watermarkStyle}
+                      onChange={(e) => setWatermarkStyle(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl text-sm text-slate-200 outline-none"
+                    >
+                      <option value="bottom_right">Bottom Right Corner</option>
+                      <option value="badge">Bottom Left Badge</option>
+                      <option value="diagonal">Large Diagonal</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <label className="text-sm font-bold text-slate-300">Opacity</label>
+                        <span className="text-xs text-slate-400">{watermarkOpacity}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="10"
+                        max="100"
+                        value={watermarkOpacity}
+                        onChange={(e) => setWatermarkOpacity(parseInt(e.target.value))}
+                        className="w-full accent-indigo-500"
+                      />
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <label className="text-sm font-bold text-slate-300">Base Size</label>
+                        <span className="text-xs text-slate-400">{watermarkSize}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="20"
+                        max="80"
+                        value={watermarkSize}
+                        onChange={(e) => setWatermarkSize(parseInt(e.target.value))}
+                        className="w-full accent-indigo-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-white/5 flex justify-end">
+                <Button type="submit" disabled={isSubmittingWatermark}>
+                  {isSubmittingWatermark ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Watermark Settings'
+                  )}
+                </Button>
+              </div>
+            </form>
           </Card>
         </TabsContent>
       </Tabs>

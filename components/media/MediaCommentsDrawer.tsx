@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Loader2, MoreVertical, Trash2 } from 'lucide-react';
+import { X, Send, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useGlobalDialog } from '@/components/providers/GlobalDialogProvider';
 
@@ -29,7 +29,7 @@ export default function MediaCommentsDrawer({ mediaId, isOpen, onClose, currentU
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
-  const { confirm, alert } = useGlobalDialog();
+  const { confirm } = useGlobalDialog();
 
   useEffect(() => {
     if (!isOpen) return;

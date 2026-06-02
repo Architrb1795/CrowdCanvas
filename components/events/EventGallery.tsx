@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Search, SlidersHorizontal, XCircle, Inbox, AlertCircle, RefreshCw } from 'lucide-react';
+import { Search, SlidersHorizontal, XCircle, Inbox, AlertCircle, RefreshCw, ScanFace } from 'lucide-react';
 import { EventWithProfile } from '@/lib/actions/events';
 import EventCard from './EventCard';
+import Link from 'next/link';
 
 interface EventGalleryProps {
   initialEvents: EventWithProfile[];
@@ -137,6 +138,13 @@ export default function EventGallery({ initialEvents = [], errorMsg }: EventGall
               aria-label="Search events"
             />
           </div>
+
+          <Link href="/my-photos" className="shrink-0">
+            <button className="h-full px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-sm">
+              <ScanFace className="w-4 h-4" />
+              Find Photos of Me
+            </button>
+          </Link>
 
           {/* Inline Filter Selects */}
           <div className="grid grid-cols-2 sm:flex items-center gap-3">

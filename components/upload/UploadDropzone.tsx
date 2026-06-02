@@ -40,6 +40,18 @@ export default function UploadDropzone({ eventId, isPrivate, onUploadComplete }:
       if (!dbResult.success || !dbResult.mediaId) {
         setErrorMsg(dbResult.error || 'Database sync failed.');
       } else {
+        // Trigger background face extraction if it's an image
+        if (info.resource_type === 'image') {
+          fetch('/api/faces/process-media', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              mediaId: dbResult.mediaId,
+              fileUrl: info.secure_url
+            })
+          }).catch(console.error); // Fire and forget
+        }
+        
         if (onUploadComplete) onUploadComplete();
       }
     } catch (err) {

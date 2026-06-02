@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Heart, MessageCircle, Share2, Sparkles, Bell, Image as ImageIcon } from 'lucide-react';
 import { AppNotification } from './NotificationItem';
@@ -15,25 +15,24 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({ notificati
   const router = useRouter();
   const [isVisible, setIsVisible] = useState(true);
 
+  const handleClose = useCallback((e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    setIsVisible(false);
+    setTimeout(() => {
+      onClose(notification.id);
+    }, 300);
+  }, [notification.id, onClose]);
+
   useEffect(() => {
-    // Auto-dismiss after 6 seconds
     const timer = setTimeout(() => {
       handleClose();
     }, 6000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [handleClose]);
 
-  const handleClose = (e?: React.MouseEvent) => {
-    if (e) {
-      e.stopPropagation();
-    }
-    setIsVisible(false);
-    // Give animation time to complete before removing from DOM
-    setTimeout(() => {
-      onClose(notification.id);
-    }, 300);
-  };
 
   const handleClick = () => {
     if (notification.action_url) {

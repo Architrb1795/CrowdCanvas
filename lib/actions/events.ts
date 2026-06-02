@@ -229,6 +229,17 @@ export async function updateEventDetails(
     const cover_url = formData.get('cover_url') as string;
     const is_public = formData.get('is_public') === 'true';
 
+    // Watermark settings
+    const watermark_enabled_raw = formData.get('watermark_enabled');
+    let watermark_enabled: boolean | undefined = undefined;
+    if (watermark_enabled_raw !== null) {
+      watermark_enabled = watermark_enabled_raw === 'true';
+    }
+    const watermark_text = formData.get('watermark_text') as string;
+    const watermark_style = formData.get('watermark_style') as string;
+    const watermark_opacity = formData.get('watermark_opacity') ? parseInt(formData.get('watermark_opacity') as string, 10) : undefined;
+    const watermark_size = formData.get('watermark_size') ? parseInt(formData.get('watermark_size') as string, 10) : undefined;
+
     if (!name || name.trim() === '') {
       return { success: false, error: 'Event name is required.' };
     }
@@ -236,7 +247,8 @@ export async function updateEventDetails(
       return { success: false, error: 'Event date is required.' };
     }
 
-    const { error: updateError } = await supabase
+     
+    const { error: updateError } = await (supabase as any)
       .from('events')
       .update({
         name: name.trim(),
@@ -246,6 +258,11 @@ export async function updateEventDetails(
         location: location ? location.trim() : null,
         cover_url: cover_url ? cover_url.trim() : null,
         is_public,
+        ...(watermark_enabled !== undefined && { watermark_enabled }),
+        ...(watermark_text !== undefined && { watermark_text: watermark_text.trim() }),
+        ...(watermark_style !== undefined && { watermark_style }),
+        ...(watermark_opacity !== undefined && { watermark_opacity }),
+        ...(watermark_size !== undefined && { watermark_size }),
       })
       .eq('id', eventId);
 
@@ -257,6 +274,65 @@ export async function updateEventDetails(
     return { success: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'An error occurred during event update.';
+    return { success: false, error: message };
+  }
+}
+
+export async function updateEventWatermark(eventId: string, formData: FormData): Promise<ServerActionResponse<null>> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: 'Unauthorized.' };
+    }
+
+    // Check permissions - must be owner or admin
+    const { data: memberData } = await supabase
+      .from('event_members')
+      .select('role')
+      .eq('event_id', eventId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (!memberData || (memberData.role !== 'owner' && memberData.role !== 'admin')) {
+      return { success: false, error: 'Unauthorized. Only event owners and admins can update event details.' };
+    }
+
+    const watermark_enabled_raw = formData.get('watermark_enabled');
+    let watermark_enabled: boolean | undefined = undefined;
+    if (watermark_enabled_raw !== null) {
+      watermark_enabled = watermark_enabled_raw === 'true';
+    }
+    const watermark_text = formData.get('watermark_text') as string;
+    const watermark_style = formData.get('watermark_style') as string;
+    const watermark_opacity = formData.get('watermark_opacity') ? parseInt(formData.get('watermark_opacity') as string, 10) : undefined;
+    const watermark_size = formData.get('watermark_size') ? parseInt(formData.get('watermark_size') as string, 10) : undefined;
+
+     
+    const { error: updateError } = await (supabase as any)
+      .from('events')
+      .update({
+        ...(watermark_enabled !== undefined && { watermark_enabled }),
+        ...(watermark_text !== undefined && { watermark_text: watermark_text.trim() }),
+        ...(watermark_style !== undefined && { watermark_style }),
+        ...(watermark_opacity !== undefined && { watermark_opacity }),
+        ...(watermark_size !== undefined && { watermark_size }),
+      })
+      .eq('id', eventId)
+      .select('id')
+      .single();
+
+    if (updateError) throw updateError;
+
+    revalidatePath(`/events/${eventId}/settings`);
+    revalidatePath(`/events/${eventId}`);
+    revalidatePath('/events');
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('Update Watermark Error:', err);
+    const message = err?.message || (typeof err === 'string' ? err : 'An error occurred during watermark update.');
     return { success: false, error: message };
   }
 }

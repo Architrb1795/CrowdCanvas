@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import ProfileDashboardClient from './ProfileDashboardClient';
 import { getProfile, getUserUploads, getUserEvents } from '@/lib/actions/profile';
+import { getFaceProfile } from '@/lib/actions/faces';
 
 export const metadata = {
   title: 'Profile | CrowdCanvas',
@@ -18,10 +19,11 @@ export default async function ProfilePage() {
   }
 
   // Fetch all required data in parallel
-  const [profileRes, uploadsRes, eventsRes] = await Promise.all([
+  const [profileRes, uploadsRes, eventsRes, faceProfile] = await Promise.all([
     getProfile(),
     getUserUploads(),
-    getUserEvents()
+    getUserEvents(),
+    getFaceProfile()
   ]);
 
   if (!profileRes.success || !profileRes.data) {
@@ -39,6 +41,7 @@ export default async function ProfilePage() {
         profile={profileRes.data} 
         uploads={uploadsRes.data || []}
         events={eventsRes.data || []}
+        faceProfile={faceProfile}
       />
     </main>
   );

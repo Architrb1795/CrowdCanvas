@@ -86,6 +86,166 @@ export interface Database {
           }
         ]
       }
+      face_matches: {
+        Row: {
+          id: string
+          face_profile_id: string
+          media_face_id: string
+          media_id: string
+          similarity_score: number
+          status: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          face_profile_id: string
+          media_face_id: string
+          media_id: string
+          similarity_score: number
+          status?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          face_profile_id?: string
+          media_face_id?: string
+          media_id?: string
+          similarity_score?: number
+          status?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "face_matches_face_profile_id_fkey"
+            columns: ["face_profile_id"]
+            isOneToOne: false
+            referencedRelation: "face_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "face_matches_media_face_id_fkey"
+            columns: ["media_face_id"]
+            isOneToOne: false
+            referencedRelation: "media_faces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "face_matches_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "media"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      face_profiles: {
+        Row: {
+          id: string
+          user_id: string
+          embedding: string
+          consent_given: boolean | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          embedding: string
+          consent_given?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          embedding?: string
+          consent_given?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "face_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      media_faces: {
+        Row: {
+          id: string
+          media_id: string
+          embedding: string
+          bounding_box: Json | null
+          confidence: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          media_id: string
+          embedding: string
+          bounding_box?: Json | null
+          confidence?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          media_id?: string
+          embedding?: string
+          bounding_box?: Json | null
+          confidence?: number | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_faces_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "media"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      recognition_jobs: {
+        Row: {
+          id: string
+          media_id: string
+          status: string | null
+          faces_found: number | null
+          error_message: string | null
+          created_at: string
+          completed_at: string | null
+        }
+        Insert: {
+          id?: string
+          media_id: string
+          status?: string | null
+          faces_found?: number | null
+          error_message?: string | null
+          created_at?: string
+          completed_at?: string | null
+        }
+        Update: {
+          id?: string
+          media_id?: string
+          status?: string | null
+          faces_found?: number | null
+          error_message?: string | null
+          created_at?: string
+          completed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recognition_jobs_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "media"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       events: {
         Row: {
           id: string
@@ -102,6 +262,12 @@ export interface Database {
           ai_highlights: Json | null
           event_story: Json | null
           event_tags: string[] | null
+          watermark_enabled: boolean | null
+          watermark_logo_url: string | null
+          watermark_opacity: number | null
+          watermark_size: number | null
+          watermark_style: string | null
+          watermark_text: string | null
         }
         Insert: {
           id?: string
@@ -118,6 +284,12 @@ export interface Database {
           ai_highlights?: Json | null
           event_story?: Json | null
           event_tags?: string[] | null
+          watermark_enabled?: boolean | null
+          watermark_logo_url?: string | null
+          watermark_opacity?: number | null
+          watermark_size?: number | null
+          watermark_style?: string | null
+          watermark_text?: string | null
         }
         Update: {
           id?: string
@@ -134,6 +306,12 @@ export interface Database {
           ai_highlights?: Json | null
           event_story?: Json | null
           event_tags?: string[] | null
+          watermark_enabled?: boolean | null
+          watermark_logo_url?: string | null
+          watermark_opacity?: number | null
+          watermark_size?: number | null
+          watermark_style?: string | null
+          watermark_text?: string | null
         }
         Relationships: [
           {
@@ -223,6 +401,11 @@ export interface Database {
           processing_error: string | null
           processing_version: string | null
           created_at: string
+          views_count?: number
+          shares_count?: number
+          downloads_count?: number
+          ai_style?: string | null
+          ai_confidence?: number | null
         }
         Insert: {
           id?: string
@@ -259,6 +442,11 @@ export interface Database {
           processing_error?: string | null
           processing_version?: string | null
           created_at?: string
+          views_count?: number
+          shares_count?: number
+          downloads_count?: number
+          ai_style?: string | null
+          ai_confidence?: number | null
         }
         Update: {
           id?: string
@@ -295,6 +483,11 @@ export interface Database {
           processing_error?: string | null
           processing_version?: string | null
           created_at?: string
+          views_count?: number
+          shares_count?: number
+          downloads_count?: number
+          ai_style?: string | null
+          ai_confidence?: number | null
         }
         Relationships: [
           {
@@ -398,6 +591,7 @@ export interface Database {
           user_id: string | null
           share_type: 'copy_link' | 'whatsapp' | 'twitter' | 'facebook' | 'download'
           created_at: string
+          is_watermarked: boolean | null
         }
         Insert: {
           id?: string
@@ -405,6 +599,7 @@ export interface Database {
           user_id?: string | null
           share_type: 'copy_link' | 'whatsapp' | 'twitter' | 'facebook' | 'download'
           created_at?: string
+          is_watermarked?: boolean | null
         }
         Update: {
           id?: string
@@ -412,6 +607,7 @@ export interface Database {
           user_id?: string | null
           share_type?: 'copy_link' | 'whatsapp' | 'twitter' | 'facebook' | 'download'
           created_at?: string
+          is_watermarked?: boolean | null
         }
         Relationships: [
           {
@@ -429,6 +625,184 @@ export interface Database {
             referencedColumns: ["id"]
           }
         ]
+      },
+      media_favourites: {
+        Row: {
+          id: string
+          user_id: string
+          media_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          media_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          media_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_favourites_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "media"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_favourites_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      user_privacy_settings: {
+        Row: {
+          user_id: string
+          hide_tagged_photos: boolean | null
+          require_tag_approval: boolean | null
+          disable_tagging: boolean | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          hide_tagged_photos?: boolean | null
+          require_tag_approval?: boolean | null
+          disable_tagging?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          hide_tagged_photos?: boolean | null
+          require_tag_approval?: boolean | null
+          disable_tagging?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_privacy_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      photo_user_tags: {
+        Row: {
+          id: string
+          media_id: string
+          tagged_user_id: string
+          tagged_by_user_id: string
+          x_coordinate: number
+          y_coordinate: number
+          status: 'pending' | 'approved' | 'rejected' | 'removed' | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          media_id: string
+          tagged_user_id: string
+          tagged_by_user_id: string
+          x_coordinate: number
+          y_coordinate: number
+          status?: 'pending' | 'approved' | 'rejected' | 'removed' | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          media_id?: string
+          tagged_user_id?: string
+          tagged_by_user_id?: string
+          x_coordinate?: number
+          y_coordinate?: number
+          status?: 'pending' | 'approved' | 'rejected' | 'removed' | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photo_user_tags_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "media"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photo_user_tags_tagged_user_id_fkey"
+            columns: ["tagged_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photo_user_tags_tagged_by_user_id_fkey"
+            columns: ["tagged_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          actor_id: string | null
+          type: 'tag_request' | 'tag_approved' | 'photo_saved'
+          media_id: string | null
+          is_read: boolean | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          actor_id?: string | null
+          type: 'tag_request' | 'tag_approved' | 'photo_saved'
+          media_id?: string | null
+          is_read?: boolean | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          actor_id?: string | null
+          type?: 'tag_request' | 'tag_approved' | 'photo_saved'
+          media_id?: string | null
+          is_read?: boolean | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "media"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {
@@ -441,6 +815,8 @@ export interface Database {
       user_role: 'admin' | 'photographer' | 'member' | 'viewer'
       event_member_role: 'owner' | 'admin' | 'uploader' | 'viewer'
       share_type_enum: 'copy_link' | 'whatsapp' | 'twitter' | 'facebook' | 'download'
+      tag_status: 'pending' | 'approved' | 'rejected' | 'removed'
+      notification_type: 'tag_request' | 'tag_approved' | 'photo_saved'
     }
     CompositeTypes: {
       [_ in never]: never

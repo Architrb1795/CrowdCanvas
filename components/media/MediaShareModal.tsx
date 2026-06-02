@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Link as LinkIcon, Download, Check, Share2 } from 'lucide-react';
+import { triggerSecureDownload } from '@/lib/utils/download';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 
@@ -58,14 +59,9 @@ export default function MediaShareModal({ mediaId, mediaUrl, thumbnailUrl, media
     });
   };
 
-  const handleDownload = () => {
-    handleShare('download', () => {
-      const a = document.createElement('a');
-      a.href = mediaUrl;
-      a.download = `crowdcanvas-${mediaId}.${mediaUrl.split('.').pop() || 'jpg'}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+  const handleDownload = async () => {
+    handleShare('download', async () => {
+      await triggerSecureDownload(mediaId, mediaUrl);
     });
   };
 

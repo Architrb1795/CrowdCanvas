@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, MessageCircle, Sparkles, BellRing } from 'lucide-react';
+import { Heart, MessageCircle, Sparkles, BellRing, ShieldAlert, LogIn } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export interface AppNotification {
@@ -41,6 +41,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
       case 'tag_approved': return <Sparkles className="w-4 h-4 text-emerald-400" />;
       case 'like': return <Heart className="w-4 h-4 text-pink-500" />;
       case 'comment': return <MessageCircle className="w-4 h-4 text-amber-400" />;
+      case 'security_alert': return <ShieldAlert className="w-4 h-4 text-red-500" />;
+      case 'new_login': return <LogIn className="w-4 h-4 text-blue-400" />;
       default: return <BellRing className="w-4 h-4 text-slate-400" />;
     }
   };
@@ -59,6 +61,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
       case 'tag_request': return `${actorName} tagged you in a photo`;
       case 'tag_approved': return `${actorName} approved your tag`;
       case 'photo_saved': return `${actorName} saved a photo of you`;
+      case 'security_alert': return 'Security Alert';
+      case 'new_login': return 'New Login Detected';
       default: return 'New notification';
     }
   };
@@ -71,6 +75,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
       case 'tag_request': return 'Click to review and approve the tag.';
       case 'tag_approved': return 'Your tag is now visible on the photo.';
       case 'photo_saved': return 'A photo you are tagged in was saved.';
+      case 'security_alert': return 'Your password was recently changed. If this was not you, please contact support immediately.';
+      case 'new_login': return 'A new device logged into your account.';
       default: return '';
     }
   };

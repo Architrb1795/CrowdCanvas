@@ -4,7 +4,7 @@
  
 'use client';
 
-import React, { useState, useTransition, useEffect } from 'react';
+import React, { useState, useTransition, useEffect, useRef } from 'react';
 import { Video, X, Save, Share2, Check, Lock, Globe, AlertCircle, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { deleteMedia, saveMediaCopy, toggleMediaVisibility } from '@/lib/actions/media';
@@ -33,6 +33,8 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
   const [recommendationSessionId, setRecommendationSessionId] = useState<string>('');
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [errorDialog, setErrorDialog] = useState<string | null>(null);
+
+  const viewedIds = useRef<Set<string>>(new Set());
 
   // Social State
   const [showComments, setShowComments] = useState(false);
@@ -94,7 +96,13 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
       .then(r => r.json())
       .then(data => {
         if (data.success && data.recommendations) {
-            setSimilarMedia(data.recommendations);
+            setSimilarMedia(data.recommendations.map((r: any) => ({
+                id: r.id,
+                file_url: r.file_url,
+                score: r.matchPercentage,
+                category: r.category,
+                reason: r.reason
+            })));
             const sessionId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(7);
             setRecommendationSessionId(sessionId);
             
@@ -117,12 +125,17 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
       .catch(console.error)
       .finally(() => setIsLoadingSimilar(false));
       
-      // Track view
-      fetch(`/api/media/${selectedMedia.id}/track`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'view' })
-      }).catch(console.error);
+      if (!viewedIds.current.has(selectedMedia.id)) {
+        viewedIds.current.add(selectedMedia.id);
+        // Track view
+        fetch(`/api/media/${selectedMedia.id}/track`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'view' })
+        }).then(() => {
+          selectedMedia.views_count = (selectedMedia.views_count || 0) + 1;
+        }).catch(console.error);
+      }
     }
   }, [selectedMedia, isEditing]);
 

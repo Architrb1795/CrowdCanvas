@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Search, SlidersHorizontal, XCircle, Inbox, AlertCircle, RefreshCw, ScanFace } from 'lucide-react';
+import { Search, SlidersHorizontal, XCircle, Inbox, AlertCircle, RefreshCw, ScanFace, Sparkles, Filter, ChevronDown } from 'lucide-react';
 import { EventWithProfile } from '@/lib/actions/events';
 import EventCard from './EventCard';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface EventGalleryProps {
   initialEvents: EventWithProfile[];
@@ -13,9 +14,11 @@ interface EventGalleryProps {
 
 export default function EventGallery({ initialEvents = [], errorMsg }: EventGalleryProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'popular' | 'media'>('newest');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedVisibility, setSelectedVisibility] = useState<'all' | 'public' | 'private'>('all');
+  const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Compute dynamic category list based on existing database values
   const categories = useMemo(() => {
@@ -32,13 +35,14 @@ export default function EventGallery({ initialEvents = [], errorMsg }: EventGall
   const filteredEvents = useMemo(() => {
     let result = [...initialEvents];
 
-    // Filter by name search
+    // Filter by Smart Search simulation
     if (searchTerm.trim() !== '') {
       const term = searchTerm.toLowerCase();
       result = result.filter(
         (e) =>
           e.name.toLowerCase().includes(term) ||
-          (e.description && e.description.toLowerCase().includes(term))
+          (e.description && e.description.toLowerCase().includes(term)) ||
+          (e.category && e.category.toLowerCase().includes(term))
       );
     }
 
@@ -55,233 +59,249 @@ export default function EventGallery({ initialEvents = [], errorMsg }: EventGall
       result = result.filter((e) => e.is_public === targetPublic);
     }
 
-    // Sort Events
-    result.sort((a, b) => {
-      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+    // Quick Filters logic
+    if (activeQuickFilter === 'Trending') {
+      // Mock logic: Sort by members (since we don't have true 'trending' without time-series data)
+      result.sort((a, b) => (b.memberCount || 0) - (a.memberCount || 0));
+    } else if (activeQuickFilter === 'Most Photos') {
+      result.sort((a, b) => (b.mediaCount || 0) - (a.mediaCount || 0));
+    } else if (activeQuickFilter === 'Public Events') {
+      result = result.filter(e => e.is_public);
+    }
 
-      if (sortBy === 'newest') {
-        return dateB - dateA;
-      } else {
-        return dateA - dateB;
-      }
-    });
+    // Standard Sort
+    if (!activeQuickFilter) {
+      result.sort((a, b) => {
+        if (sortBy === 'popular') return (b.memberCount || 0) - (a.memberCount || 0);
+        if (sortBy === 'media') return (b.mediaCount || 0) - (a.mediaCount || 0);
+        
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
+      });
+    }
 
     return result;
-  }, [initialEvents, searchTerm, selectedCategory, selectedVisibility, sortBy]);
+  }, [initialEvents, searchTerm, selectedCategory, selectedVisibility, sortBy, activeQuickFilter]);
 
-  // Reset helper
   const handleClearFilters = () => {
     setSearchTerm('');
     setSortBy('newest');
     setSelectedCategory('all');
     setSelectedVisibility('all');
+    setActiveQuickFilter(null);
   };
 
-  // 1. Error boundary fallback UI
+  const quickFilters = ['Trending', 'Popular', 'Recently Added', 'Most Photos', 'Public Events'];
+
   if (errorMsg) {
     return (
-      <div 
-        className="w-full max-w-2xl mx-auto my-12 p-8 bg-red-50/50 border border-red-100 rounded-2xl text-center"
-        role="alert"
-        aria-live="assertive"
-      >
+      <div className="w-full max-w-2xl mx-auto my-12 p-8 bg-red-50/50 border border-red-100 rounded-3xl text-center" role="alert">
         <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
         <h3 className="text-lg font-bold text-red-900 mb-2">Failed to Load Events</h3>
         <p className="text-sm text-red-700 mb-6">{errorMsg}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Retry Connection
+        <button onClick={() => window.location.reload()} className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-colors">
+          <RefreshCw className="w-4 h-4" /> Retry Connection
         </button>
       </div>
     );
   }
 
-  // 2. Main Empty State (No events exist at all in database)
-  if (initialEvents.length === 0) {
-    return (
-      <div className="w-full max-w-md mx-auto my-16 text-center p-8 bg-slate-50 border border-dashed border-slate-200 rounded-3xl">
-        <Inbox className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-        <h3 className="text-xl font-bold text-slate-900 mb-2">No Events Found</h3>
-        <p className="text-sm text-slate-600 mb-6 leading-relaxed">
-          There are currently no events registered. Click the &quot;Create Event&quot; button above to launch the university&apos;s first activity!
-        </p>
-        <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
-          Awaiting Admin Action
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <section className="space-y-8" aria-label="Event Discovery Grid">
+    <section className="space-y-8" aria-label="Smart Discovery Panel">
       
-      {/* Premium Filter Dashboard */}
-      <nav 
-        className="bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4"
-        aria-label="Event Filters"
-      >
-        <div className="flex flex-col lg:flex-row gap-4 justify-between">
-          
-          {/* Search Box */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 pointer-events-none" />
+      {/* Premium Smart Search Dashboard */}
+      <div className="bg-white/80 backdrop-blur-xl border border-slate-200/80 rounded-3xl p-6 shadow-xl shadow-slate-200/20 space-y-6">
+        
+        {/* Top Row: AI Search Bar and Find Photos */}
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="relative flex-1 group">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Sparkles className="w-5 h-5 text-indigo-500 group-focus-within:text-indigo-600 transition-colors" />
+            </div>
             <input
               type="text"
-              placeholder="Search by event name or keywords..."
+              placeholder='Smart Search: Try "Show me cultural events"'
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-indigo-500 focus:bg-white rounded-xl text-sm text-slate-900 placeholder-slate-400 outline-none transition-all focus:ring-2 focus:ring-indigo-100"
-              aria-label="Search events"
+              className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 hover:border-indigo-300 focus:border-indigo-600 focus:bg-white rounded-2xl text-base text-slate-900 placeholder-slate-400 outline-none transition-all focus:ring-4 focus:ring-indigo-600/10 shadow-inner"
             />
           </div>
 
-          <Link href="/my-photos" className="shrink-0">
-            <button className="h-full px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-sm">
-              <ScanFace className="w-4 h-4" />
+          <Link href="/my-photos" className="shrink-0 h-full">
+            <button className="h-full px-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/40 w-full lg:w-auto">
+              <ScanFace className="w-5 h-5" />
               Find Photos of Me
             </button>
           </Link>
-
-          {/* Inline Filter Selects */}
-          <div className="grid grid-cols-2 sm:flex items-center gap-3">
-            
-            {/* Category Filter */}
-            <div className="flex flex-col">
-              <label htmlFor="category-select" className="sr-only">Category</label>
-              <select
-                id="category-select"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-indigo-500 focus:bg-white rounded-xl text-sm font-semibold text-slate-700 outline-none cursor-pointer transition-all"
-              >
-                <option value="all">All Categories</option>
-                {categories
-                  .filter((cat) => cat !== 'all')
-                  .map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            {/* Visibility Filter */}
-            <div className="flex flex-col">
-              <label htmlFor="visibility-select" className="sr-only">Visibility</label>
-              <select
-                id="visibility-select"
-                value={selectedVisibility}
-                onChange={(e) => setSelectedVisibility(e.target.value as 'all' | 'public' | 'private')}
-                className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-indigo-500 focus:bg-white rounded-xl text-sm font-semibold text-slate-700 outline-none cursor-pointer transition-all"
-              >
-                <option value="all">All Visibility</option>
-                <option value="public">Public Only</option>
-                <option value="private">Private Only</option>
-              </select>
-            </div>
-
-            {/* Sort Filter */}
-            <div className="flex flex-col">
-              <label htmlFor="sort-select" className="sr-only">Sort By</label>
-              <select
-                id="sort-select"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest')}
-                className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-indigo-500 focus:bg-white rounded-xl text-sm font-semibold text-slate-700 outline-none cursor-pointer transition-all"
-              >
-                <option value="newest">Sort: Newest</option>
-                <option value="oldest">Sort: Oldest</option>
-              </select>
-            </div>
-          </div>
         </div>
 
-        {/* Filters Stats & Reset Button */}
-        <div className="flex items-center justify-between gap-4 pt-3 border-t border-slate-100 text-xs">
-          <div className="flex items-center gap-2 font-medium text-slate-500">
-            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
+        {/* Quick Filters */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2">Quick Filters:</span>
+          {quickFilters.map(filter => (
+            <button
+              key={filter}
+              onClick={() => setActiveQuickFilter(activeQuickFilter === filter ? null : filter)}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+                activeQuickFilter === filter 
+                ? 'bg-indigo-600 text-white shadow-md' 
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {filter}
+            </button>
+          ))}
+          <button 
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="ml-auto flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors"
+          >
+            <Filter className="w-3.5 h-3.5" />
+            Advanced Filters
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
+
+        {/* Advanced Filters (Expandable) */}
+        <AnimatePresence>
+          {showAdvanced && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="pt-6 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">Category</label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="px-4 py-3 bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-xl text-sm font-semibold text-slate-700 outline-none cursor-pointer transition-all"
+                  >
+                    <option value="all">All Categories</option>
+                    {categories.filter(c => c !== 'all').map(c => (
+                      <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">Visibility</label>
+                  <select
+                    value={selectedVisibility}
+                    onChange={(e) => setSelectedVisibility(e.target.value as 'all' | 'public' | 'private')}
+                    className="px-4 py-3 bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-xl text-sm font-semibold text-slate-700 outline-none cursor-pointer transition-all"
+                  >
+                    <option value="all">Any Visibility</option>
+                    <option value="public">Public</option>
+                    <option value="private">Private</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">Sort By</label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest' | 'popular' | 'media')}
+                    className="px-4 py-3 bg-slate-50 border border-slate-200 focus:border-indigo-500 rounded-xl text-sm font-semibold text-slate-700 outline-none cursor-pointer transition-all"
+                  >
+                    <option value="newest">Recently Added</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="popular">Most Members</option>
+                    <option value="media">Most Media</option>
+                  </select>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Results Count & Clear */}
+        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+          <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
+            <SlidersHorizontal className="w-4 h-4 text-slate-400" />
             <span aria-live="polite">
-              {filteredEvents.length} {filteredEvents.length === 1 ? 'Event' : 'Events'} Found
+              <strong>{filteredEvents.length}</strong> events found
             </span>
           </div>
 
-          {(searchTerm || selectedCategory !== 'all' || selectedVisibility !== 'all' || sortBy !== 'newest') && (
+          {(searchTerm || selectedCategory !== 'all' || selectedVisibility !== 'all' || sortBy !== 'newest' || activeQuickFilter) && (
             <button
               onClick={handleClearFilters}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 hover:text-slate-800 text-slate-600 rounded-lg font-semibold transition-colors outline-none"
-              aria-label="Clear active filters"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold transition-colors"
             >
-              <XCircle className="w-3.5 h-3.5" />
-              Clear Filters
+              <XCircle className="w-3.5 h-3.5" /> Clear All Filters
             </button>
           )}
         </div>
-      </nav>
+      </div>
 
-      {/* 3. Filter Empty State (no matches found) */}
-      {filteredEvents.length === 0 ? (
-        <div 
-          className="text-center py-16 bg-white border border-slate-200 rounded-2xl shadow-sm"
-          role="status"
-        >
-          <Inbox className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <h4 className="text-lg font-bold text-slate-800 mb-1">No Matches Found</h4>
-          <p className="text-sm text-slate-500 max-w-sm mx-auto mb-5 leading-relaxed">
-            We couldn&apos;t find any events matching &quot;{searchTerm}&quot; under your current filters. Try refining your criteria.
+      {/* Main Empty State */}
+      {initialEvents.length === 0 ? (
+        <div className="w-full max-w-lg mx-auto my-16 text-center p-12 bg-white border border-slate-200 rounded-3xl shadow-sm">
+          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Inbox className="w-10 h-10 text-slate-400" />
+          </div>
+          <h3 className="text-2xl font-bold text-slate-900 mb-3">No Events Yet</h3>
+          <p className="text-base text-slate-500 mb-8 leading-relaxed">
+            The platform is empty. Be the first to create an amazing event and start building the community!
+          </p>
+          <Link href="/events/create">
+            <button className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-md transition-all">
+              Create First Event
+            </button>
+          </Link>
+        </div>
+      ) : filteredEvents.length === 0 ? (
+        <div className="text-center py-20 bg-white border border-slate-200 rounded-3xl shadow-sm">
+          <Search className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+          <h4 className="text-xl font-bold text-slate-800 mb-2">No AI Matches Found</h4>
+          <p className="text-base text-slate-500 max-w-sm mx-auto mb-6 leading-relaxed">
+            We couldn&apos;t find any events matching your smart search criteria.
           </p>
           <button
             onClick={handleClearFilters}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all"
+            className="px-6 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-sm font-bold transition-all"
           >
-            Reset Discovery filters
+            Reset Filters
           </button>
         </div>
       ) : (
-        /* Responsive Card Grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredEvents.map((event) => (
-            <EventCard key={event.id} event={event} />
-          ))}
-        </div>
+        /* Event Grid with layout animations */
+        <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <AnimatePresence>
+            {filteredEvents.map((event) => (
+              <motion.div
+                key={event.id}
+                layout
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.3 }}
+              >
+                <EventCard event={event} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
       )}
     </section>
   );
 }
 
-/**
- * Standard visual Skeleton card loader that strictly mimics
- * the size, padding, cover banner, and content layouts of EventCard.tsx
- */
+// Skeleton loading state
 export function EventGallerySkeleton() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div 
-          key={i} 
-          className="flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden h-[380px] animate-pulse"
-          aria-hidden="true"
-        >
-          <div className="h-32 w-full bg-slate-200"></div>
-          <div className="p-6 flex-1 flex flex-col space-y-4">
-            <div className="flex justify-between items-center">
-              <div className="h-4 w-16 bg-slate-200 rounded-md"></div>
-              <div className="h-4 w-24 bg-slate-200 rounded-md"></div>
-            </div>
-            <div className="h-6 w-3/4 bg-slate-200 rounded-md"></div>
-            <div className="space-y-2">
-              <div className="h-4 w-full bg-slate-200 rounded-md"></div>
-              <div className="h-4 w-5/6 bg-slate-200 rounded-md"></div>
-            </div>
-            <div className="mt-auto pt-4 border-t border-slate-100 flex justify-between">
-              <div className="h-4 w-20 bg-slate-200 rounded-md"></div>
-              <div className="h-4 w-20 bg-slate-200 rounded-md"></div>
-            </div>
+        <div key={i} className="flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden h-[420px] animate-pulse">
+          <div className="h-48 w-full bg-slate-200" />
+          <div className="p-6 flex-1 space-y-4">
+            <div className="flex justify-between"><div className="h-5 w-20 bg-slate-200 rounded-full" /><div className="h-5 w-24 bg-slate-200 rounded-full" /></div>
+            <div className="h-6 w-3/4 bg-slate-200 rounded-md" />
+            <div className="space-y-2"><div className="h-4 w-full bg-slate-200 rounded-md" /><div className="h-4 w-5/6 bg-slate-200 rounded-md" /></div>
           </div>
-          <div className="h-12 w-full bg-slate-100 border-t border-slate-200"></div>
         </div>
       ))}
     </div>

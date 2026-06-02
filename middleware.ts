@@ -35,12 +35,14 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/register')
+  const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/register') || request.nextUrl.pathname.startsWith('/forgot-password') || request.nextUrl.pathname.startsWith('/update-password')
   const isDashboardRoute = request.nextUrl.pathname.startsWith('/events') || 
                            request.nextUrl.pathname.startsWith('/upload') || 
-                           request.nextUrl.pathname.startsWith('/media')
+                           request.nextUrl.pathname.startsWith('/media') ||
+                           request.nextUrl.pathname.startsWith('/profile')
+  const isOnboardingRoute = request.nextUrl.pathname.startsWith('/onboarding')
 
-  if (!user && !isAuthRoute && isDashboardRoute) {
+  if (!user && !isAuthRoute && (isDashboardRoute || isOnboardingRoute)) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()
     url.pathname = '/login'
@@ -49,6 +51,20 @@ export async function middleware(request: NextRequest) {
 
   if (user && isAuthRoute) {
     // If user is already logged in and tries to access login/register, redirect to dashboard or home
+    const url = request.nextUrl.clone()
+    url.pathname = '/events'
+    return NextResponse.redirect(url)
+  }
+
+  if (user && !isOnboardingRoute && !user.user_metadata?.onboarding_complete) {
+    // If user is logged in but hasn't completed onboarding, redirect to onboarding
+    const url = request.nextUrl.clone()
+    url.pathname = '/onboarding'
+    return NextResponse.redirect(url)
+  }
+
+  if (user && isOnboardingRoute && user.user_metadata?.onboarding_complete) {
+    // If user has completed onboarding but tries to access onboarding, redirect to dashboard
     const url = request.nextUrl.clone()
     url.pathname = '/events'
     return NextResponse.redirect(url)

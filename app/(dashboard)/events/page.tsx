@@ -1,18 +1,40 @@
 import React from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { getEvents } from '@/lib/actions/events';
+
+// New Premium Components
+import EventHero from '@/components/events/EventHero';
+import PlatformStats from '@/components/events/PlatformStats';
 import EventGallery from '@/components/events/EventGallery';
-import CreateEventTrigger from '@/components/events/CreateEventTrigger';
-import { CalendarRange, Globe, Shield, Sparkles } from 'lucide-react';
+import EventRecommendations from '@/components/events/EventRecommendations';
+import TrendingEvents from '@/components/events/TrendingEvents';
+import ActivityFeed from '@/components/events/ActivityFeed';
+import PersonalizedDashboard from '@/components/events/PersonalizedDashboard';
 
 export const revalidate = 0; // Disable server cache to ensure fresh data retrieval on every visit
 
 export default async function EventsPage() {
   const supabase = await createClient();
   
-  // Resolve user authenticated session and database credentials
-  await supabase.auth.getUser();
-  // Removed legacy admin check, all authenticated users can now create events.
+  // Resolve user authenticated session
+  const { data: { user } } = await supabase.auth.getUser();
+
+  let userName = 'Explorer';
+  let userMediaCount = 0;
+  let userFacesFound = 0;
+
+  if (user) {
+    // Parallelize user-specific data fetching
+    const [profileRes, mediaCountRes, facesFoundRes] = await Promise.all([
+      supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+      supabase.from('media').select('*', { count: 'exact', head: true }).eq('uploaded_by', user.id),
+      supabase.from('photo_user_tags').select('*', { count: 'exact', head: true }).eq('tagged_user_id', user.id)
+    ]);
+    
+    userName = profileRes.data?.full_name?.split(' ')[0] || 'Explorer';
+    userMediaCount = mediaCountRes.count || 0;
+    userFacesFound = facesFoundRes.count || 0;
+  }
 
   // Fetch events using server actions
   const response = await getEvents();
@@ -23,89 +45,107 @@ export default async function EventsPage() {
   const totalCount = events.length;
   const publicCount = events.filter((e) => e.is_public).length;
   const privateCount = totalCount - publicCount;
+  const totalMedia = events.reduce((acc, curr) => acc + (curr.mediaCount || 0), 0);
+  const totalMembers = events.reduce((acc, curr) => acc + (curr.memberCount || 0), 0);
+
+  // Fetch global platform stats & trends
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const [globalFacesRes, recentMediaRes, mediaTodayRes, membersWeekRes, tagsTodayRes] = await Promise.all([
+    supabase.from('photo_user_tags').select('*', { count: 'exact', head: true }),
+    supabase.from('media')
+      .select('id, created_at, profiles(full_name), events(id, name)')
+      .order('created_at', { ascending: false })
+      .limit(5),
+    supabase.from('media').select('*', { count: 'exact', head: true }).gte('created_at', todayStart.toISOString()),
+    supabase.from('event_members').select('*', { count: 'exact', head: true }).gte('created_at', oneWeekAgo.toISOString()),
+    supabase.from('photo_user_tags').select('*', { count: 'exact', head: true }).gte('created_at', todayStart.toISOString()),
+  ]);
+  
+  const facesIndexed = globalFacesRes.count || 0;
+  const eventsThisWeek = events.filter(e => new Date(e.created_at) > oneWeekAgo).length;
+  const mediaTodayCount = mediaTodayRes.count || 0;
+  const membersWeekCount = membersWeekRes.count || 0;
+  const tagsTodayCount = tagsTodayRes.count || 0;
+  
+  // Format recent activity
+  const recentActivity = (recentMediaRes.data || []).map((m: any) => ({
+    id: m.id,
+    user: m.profiles?.full_name || 'Someone',
+    action: 'uploaded a photo to',
+    target: m.events?.name || 'an event',
+    targetId: m.events?.id,
+    time: new Date(m.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  }));
+
+  const userEventsJoined = events.filter(e => e.currentUserRole !== null).length;
 
   return (
-    <main className="min-h-screen bg-slate-50/50 pb-20">
-      {/* Visual Premium Hero Section */}
-      <section 
-        className="relative bg-slate-900 overflow-hidden py-16 sm:py-20 border-b border-slate-800"
-        aria-label="Events Dashboard Banner"
-      >
-        {/* Abstract futuristic grid layout overlay */}
-        <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full filter blur-3xl pointer-events-none"></div>
+    <main className="min-h-screen bg-slate-50/50 pb-24">
+      {/* PHASE 2: Premium Hero Section */}
+      <EventHero />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="space-y-3 max-w-2xl">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/15 border border-indigo-500/30 rounded-full text-xs font-bold text-indigo-400 uppercase tracking-wider">
-                <Sparkles className="w-3.5 h-3.5" />
-                CrowdCanvas core
-              </span>
-              <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
-                Event Hub
-              </h1>
-              <p className="text-base sm:text-lg text-slate-300 leading-relaxed">
-                Discover campus gatherings, workshops, festivals, and activities. Upload, organize, and interact with live media archives.
-              </p>
-            </div>
+      {/* PHASE 3: Live Platform Stats */}
+      <PlatformStats 
+        totalCount={totalCount}
+        publicCount={publicCount}
+        privateCount={privateCount}
+        totalMedia={totalMedia}
+        totalMembers={totalMembers}
+        facesIndexed={facesIndexed} 
+        eventsTrend={`+${eventsThisWeek} THIS WEEK`}
+        mediaTrend={`+${mediaTodayCount} TODAY`}
+        membersTrend={`+${membersWeekCount} THIS WEEK`}
+        facesTrend={`+${tagsTodayCount} TODAY`}
+      />
+
+      {/* Main Content Layout */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12" id="discovery-panel">
+        
+        {/* PHASE 10 & 11: Personalized Dashboard (Shown if logged in) */}
+        {user && (
+          <PersonalizedDashboard 
+            userName={userName} 
+            facesFound={userFacesFound}
+            eventsJoined={userEventsJoined}
+            mediaUploaded={userMediaCount}
+          />
+        )}
+
+        <div className="flex flex-col lg:flex-row gap-8 mt-8">
+          
+          {/* Left Column (Main Content) */}
+          <div className="flex-1 space-y-8">
             
-            {/* Modal creator trigger visible to all authenticated users */}
-            <div className="flex-shrink-0">
-              <CreateEventTrigger />
+            {/* PHASE 4, 5, 6: Smart Discovery & Event Gallery */}
+            <div>
+              <div className="flex items-center justify-between mb-6 px-1">
+                <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Discover Events</h2>
+              </div>
+              <EventGallery initialEvents={events} errorMsg={errorMsg} />
             </div>
+
+          </div>
+
+          {/* Right Column (Sidebar Modules for Phase 7, 8, 9) */}
+          <div className="w-full lg:w-[350px] shrink-0 space-y-6">
+            
+            {/* PHASE 7: Recommendations */}
+            <EventRecommendations events={events} />
+            
+            {/* PHASE 9: Social Feed */}
+            <ActivityFeed activities={recentActivity} />
+
+            {/* PHASE 8: Trending Events */}
+            <TrendingEvents events={events} />
+
           </div>
         </div>
-      </section>
-
-      {/* Dynamic Statistics Panel */}
-      <section 
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-20"
-        aria-label="Event Statistics"
-      >
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white/90 backdrop-blur-md p-5 rounded-2xl shadow-md border border-slate-200/65">
-          {/* Stat 1: Total */}
-          <div className="flex items-center gap-4 px-4 py-3.5 border-b sm:border-b-0 sm:border-r border-slate-100">
-            <div className="p-3 bg-indigo-50 rounded-xl">
-              <CalendarRange className="w-6 h-6 text-indigo-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-black text-slate-900">{totalCount}</div>
-              <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">Total Events</div>
-            </div>
-          </div>
-
-          {/* Stat 2: Public */}
-          <div className="flex items-center gap-4 px-4 py-3.5 border-b sm:border-b-0 sm:border-r border-slate-100">
-            <div className="p-3 bg-emerald-50 rounded-xl">
-              <Globe className="w-6 h-6 text-emerald-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-black text-slate-900">{publicCount}</div>
-              <div className="text-xs font-bold text-slate-500 uppercase tracking-wide text-emerald-700">Public Access</div>
-            </div>
-          </div>
-
-          {/* Stat 3: Private */}
-          <div className="flex items-center gap-4 px-4 py-3.5">
-            <div className="p-3 bg-amber-50 rounded-xl">
-              <Shield className="w-6 h-6 text-amber-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-black text-slate-900">{privateCount}</div>
-              <div className="text-xs font-bold text-slate-500 uppercase tracking-wide text-amber-700">Private restricted</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Discovery Dashboard & Gallery */}
-      <section 
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12"
-        aria-label="Event Listing"
-      >
-        <EventGallery initialEvents={events} errorMsg={errorMsg} />
-      </section>
+      </div>
     </main>
   );
 }

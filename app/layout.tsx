@@ -9,11 +9,11 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'CrowdCanvas | AI-Powered Event & Media Management',
   description: 'The premium event and media management platform for clubs, photographers, and communities.',
-  metadataBase: new URL('https://crowdcanvas.app'), // Replace with actual production domain when ready
+  metadataBase: new URL('https://crowd-canvas-one.vercel.app'),
   openGraph: {
     title: 'CrowdCanvas | Intelligent Event Hub',
     description: 'Discover events, join communities, and find photos of yourself instantly with AI facial recognition.',
-    url: 'https://crowdcanvas.app',
+    url: 'https://crowd-canvas-one.vercel.app',
     siteName: 'CrowdCanvas',
     images: [
       {

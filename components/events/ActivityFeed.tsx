@@ -31,26 +31,36 @@ export default function ActivityFeed({ activities }: ActivityFeedProps) {
       {displayActivities.length === 0 ? (
         <div className="text-center py-6 text-sm text-slate-500">No recent activity yet.</div>
       ) : (
-        <div className="space-y-5 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-slate-200 before:to-transparent">
-          {displayActivities.map((item) => {
+        <div className="space-y-4">
+          {displayActivities.map((item, index) => {
             const Icon = ImageIcon; // Fallback icon for real data
             const color = 'text-indigo-500';
+            // Generate a deterministic background color for the avatar based on the user's name
+            const bgColors = ['bg-indigo-500', 'bg-emerald-500', 'bg-rose-500', 'bg-amber-500', 'bg-sky-500'];
+            const avatarBg = bgColors[item.user.length % bgColors.length];
+            const initial = item.user.charAt(0).toUpperCase();
+
           return (
-            <div key={item.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-              {/* Icon / Marker */}
-              <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-slate-50 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm relative z-10">
-                <Icon className={`w-4 h-4 ${color}`} />
+            <div key={item.id} className="group relative flex items-start gap-3 p-3 rounded-2xl transition-all hover:bg-slate-50 hover:shadow-sm">
+              {/* Avatar + Icon Badge */}
+              <div className="relative shrink-0">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${avatarBg} shadow-inner`}>
+                  {initial}
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white border border-slate-100 shadow-sm flex items-center justify-center">
+                  <Icon className={`w-3 h-3 ${color}`} />
+                </div>
               </div>
               
-              {/* Card */}
-              <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-3 rounded-2xl border border-slate-100 bg-slate-50 shadow-sm transition-all hover:bg-white hover:shadow-md hover:border-slate-200">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-slate-900 text-sm">{item.user}</span>
-                  <time className="text-[10px] font-bold text-slate-400 uppercase">{item.time}</time>
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-slate-900 leading-snug">
+                  <span className="font-bold">{item.user}</span> {item.action}{' '}
+                  <Link href={`/events/${item.targetId}`} className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline">
+                    {item.target}
+                  </Link>
                 </div>
-                <div className="text-xs text-slate-600 font-medium">
-                  {item.action} <Link href={`/events/${item.targetId}`} className="font-bold text-indigo-600 hover:underline">{item.target}</Link>
-                </div>
+                <time className="text-xs text-slate-500 mt-0.5 block">{item.time}</time>
               </div>
             </div>
           );

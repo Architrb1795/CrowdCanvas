@@ -1,6 +1,6 @@
 import React from 'react';
 import { createClient } from '@/lib/supabase/server';
-import { getEvents } from '@/lib/actions/events';
+import { getEvents, getPinnedEvents } from '@/lib/actions/events';
 
 // New Premium Components
 import EventHero from '@/components/events/EventHero';
@@ -13,6 +13,24 @@ import PersonalizedDashboard from '@/components/events/PersonalizedDashboard';
 
 export const revalidate = 0; // Disable server cache to ensure fresh data retrieval on every visit
 
+function timeAgo(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} day${days > 1 ? 's' : ''} ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} month${months > 1 ? 's' : ''} ago`;
+  const years = Math.floor(months / 12);
+  return `${years} year${years > 1 ? 's' : ''} ago`;
+}
+
 export default async function EventsPage() {
   const supabase = await createClient();
   
@@ -22,18 +40,21 @@ export default async function EventsPage() {
   let userName = 'Explorer';
   let userMediaCount = 0;
   let userFacesFound = 0;
+  let pinnedEventIds: string[] = [];
 
   if (user) {
     // Parallelize user-specific data fetching
-    const [profileRes, mediaCountRes, facesFoundRes] = await Promise.all([
+    const [profileRes, mediaCountRes, facesFoundRes, pinnedEventsRes] = await Promise.all([
       supabase.from('profiles').select('full_name').eq('id', user.id).single(),
       supabase.from('media').select('*', { count: 'exact', head: true }).eq('uploaded_by', user.id),
-      supabase.from('photo_user_tags').select('*', { count: 'exact', head: true }).eq('tagged_user_id', user.id)
+      supabase.from('photo_user_tags').select('*', { count: 'exact', head: true }).eq('tagged_user_id', user.id),
+      getPinnedEvents()
     ]);
     
     userName = profileRes.data?.full_name?.split(' ')[0] || 'Explorer';
     userMediaCount = mediaCountRes.count || 0;
     userFacesFound = facesFoundRes.count || 0;
+    pinnedEventIds = pinnedEventsRes.data || [];
   }
 
   // Fetch events using server actions
@@ -73,13 +94,13 @@ export default async function EventsPage() {
   const tagsTodayCount = tagsTodayRes.count || 0;
   
   // Format recent activity
-  const recentActivity = (recentMediaRes.data || []).map((m: any) => ({
+  const recentActivity = (recentMediaRes.data || []).map((m) => ({
     id: m.id,
     user: m.profiles?.full_name || 'Someone',
     action: 'uploaded a photo to',
     target: m.events?.name || 'an event',
-    targetId: m.events?.id,
-    time: new Date(m.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    targetId: m.events?.id || '',
+    time: timeAgo(m.created_at)
   }));
 
   const userEventsJoined = events.filter(e => e.currentUserRole !== null).length;
@@ -126,7 +147,7 @@ export default async function EventsPage() {
               <div className="flex items-center justify-between mb-6 px-1">
                 <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Discover Events</h2>
               </div>
-              <EventGallery initialEvents={events} errorMsg={errorMsg} />
+              <EventGallery initialEvents={events} errorMsg={errorMsg} pinnedEventIds={pinnedEventIds} />
             </div>
 
           </div>

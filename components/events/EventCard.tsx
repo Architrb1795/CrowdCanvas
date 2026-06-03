@@ -3,15 +3,36 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Tag, Globe, Lock, Image as ImageIcon, Users, ArrowRight, Settings, Sparkles, ScanFace, Activity, Eye } from 'lucide-react';
-import { EventWithProfile } from '@/lib/actions/events';
+import { Calendar, Tag, Globe, Lock, Image as ImageIcon, Users, ArrowRight, Settings, Sparkles, ScanFace, Activity, Eye, Pin } from 'lucide-react';
+import { EventWithProfile, togglePinEvent } from '@/lib/actions/events';
 
 interface EventCardProps {
   event: EventWithProfile;
+  isPinned?: boolean;
 }
 
-export default function EventCard({ event }: EventCardProps) {
+export default function EventCard({ event, isPinned = false }: EventCardProps) {
   const [showPreview, setShowPreview] = useState(false);
+  const [optimisticPinned, setOptimisticPinned] = useState(isPinned);
+  const [isPinning, setIsPinning] = useState(false);
+
+  const handleTogglePin = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isPinning) return;
+    
+    setIsPinning(true);
+    setOptimisticPinned(!optimisticPinned); // Optimistic update
+    
+    const res = await togglePinEvent(event.id);
+    if (!res.success) {
+      // Revert on failure
+      setOptimisticPinned(optimisticPinned);
+    } else {
+      setOptimisticPinned(res.data?.isPinned || false);
+    }
+    setIsPinning(false);
+  };
 
   // Safe date parsing
   const formattedDate = event.event_date
@@ -96,7 +117,20 @@ export default function EventCard({ event }: EventCardProps) {
         </div>
 
         {/* AI Indicators Floating on top right */}
-        <div className="absolute top-4 right-4 flex flex-col gap-2">
+        <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
+          <button 
+            onClick={handleTogglePin}
+            disabled={isPinning}
+            className={`w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-lg ${
+              optimisticPinned 
+                ? 'bg-indigo-600 text-white border border-indigo-500' 
+                : 'bg-white/20 hover:bg-white/40 backdrop-blur-md border border-white/25 text-white'
+            }`}
+            title={optimisticPinned ? "Unpin Event" : "Pin Event"}
+          >
+            <Pin className={`w-4 h-4 ${optimisticPinned ? 'fill-current' : ''}`} />
+          </button>
+
           {isAiIndexed && (
             <div className="px-2 py-1 rounded-md bg-indigo-500/80 backdrop-blur-md text-[10px] font-bold text-white uppercase tracking-wider flex items-center gap-1 shadow-sm">
               <Sparkles className="w-3 h-3" /> AI Indexed

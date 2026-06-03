@@ -62,14 +62,14 @@ export default function PlatformStats({
 }: PlatformStatsProps) {
   
   const stats = [
-    { label: 'Total Events', value: totalCount, icon: CalendarRange, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', trend: eventsTrend },
-    { label: 'Media Uploaded', value: totalMedia, icon: ImageIcon, color: 'text-pink-600', bg: 'bg-pink-50', border: 'border-pink-100', trend: mediaTrend },
-    { label: 'Active Members', value: totalMembers, icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', trend: membersTrend },
-    { label: 'Faces Indexed', value: facesIndexed, icon: ScanFace, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100', trend: facesTrend },
+    { label: 'Total Events', value: totalCount, icon: CalendarRange, color: 'text-indigo-400', bg: 'bg-indigo-500/10', border: 'border-indigo-500/20', trend: eventsTrend },
+    { label: 'Media Uploaded', value: totalMedia, icon: ImageIcon, color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20', trend: mediaTrend },
+    { label: 'Active Members', value: totalMembers, icon: Users, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', trend: membersTrend },
+    { label: 'Faces Indexed', value: facesIndexed, icon: ScanFace, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', trend: facesTrend },
   ];
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-20" aria-label="Live Platform Statistics">
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 relative z-20" aria-label="Live Platform Statistics">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, idx) => {
           const Icon = stat.icon;
@@ -79,22 +79,23 @@ export default function PlatformStats({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 + (idx * 0.1) }}
-              className="bg-white/90 backdrop-blur-xl p-5 rounded-2xl shadow-lg border border-slate-200/65 flex flex-col hover:-translate-y-1 transition-transform"
+              className="group relative bg-slate-900/60 backdrop-blur-2xl p-5 rounded-2xl shadow-2xl shadow-black/50 border border-white/5 flex flex-col hover:-translate-y-1 hover:border-white/10 hover:bg-slate-800/80 transition-all overflow-hidden"
             >
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-xl ${stat.bg} ${stat.border} border`}>
+              <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
+              <div className="relative z-10 flex items-center justify-between mb-4">
+                <div className={`p-3 rounded-xl ${stat.bg} ${stat.border} border shadow-inner`}>
                   <Icon className={`w-6 h-6 ${stat.color}`} />
                 </div>
-                <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
+                <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2.5 py-1 rounded-full">
                   <TrendingUp className="w-3 h-3" />
                   {stat.trend}
                 </div>
               </div>
-              <div>
-                <div className="text-3xl font-black text-slate-900 tracking-tight">
+              <div className="relative z-10">
+                <div className="text-3xl font-black text-white tracking-tight">
                   <AnimatedCounter value={stat.value} />
                 </div>
-                <div className="text-sm font-semibold text-slate-500">{stat.label}</div>
+                <div className="text-sm font-medium text-slate-400 mt-1">{stat.label}</div>
               </div>
             </motion.div>
           );

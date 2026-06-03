@@ -336,3 +336,76 @@ export async function updateEventWatermark(eventId: string, formData: FormData):
     return { success: false, error: message };
   }
 }
+
+export async function togglePinEvent(eventId: string): Promise<ServerActionResponse<{ isPinned: boolean }>> {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return { success: false, error: 'Unauthorized.' };
+    }
+
+    // Check if it's already pinned
+    const { data: existingPin } = await (supabase as any)
+      .from('user_pinned_events')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('event_id', eventId)
+      .single();
+
+    let isPinned = false;
+
+    if (existingPin) {
+      // Unpin
+      const { error } = await (supabase as any)
+        .from('user_pinned_events')
+        .delete()
+        .eq('id', existingPin.id);
+        
+      if (error) throw error;
+      isPinned = false;
+    } else {
+      // Pin
+      const { error } = await (supabase as any)
+        .from('user_pinned_events')
+        .insert({ user_id: user.id, event_id: eventId });
+        
+      if (error) throw error;
+      isPinned = true;
+    }
+
+    revalidatePath('/events');
+    
+    return { success: true, data: { isPinned } };
+  } catch (err: any) {
+    console.error('Toggle Pin Error:', err);
+    return { success: false, error: err.message || 'Failed to toggle pin' };
+  }
+}
+
+export async function getPinnedEvents(): Promise<ServerActionResponse<string[]>> {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return { success: true, data: [] }; // return empty for unauthenticated users
+    }
+
+    const { data, error } = await (supabase as any)
+      .from('user_pinned_events')
+      .select('event_id')
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    const pinnedEventIds = data.map((pin: any) => pin.event_id);
+
+    return { success: true, data: pinnedEventIds };
+  } catch (err: any) {
+    console.error('Get Pinned Events Error:', err);
+    return { success: false, error: err.message || 'Failed to fetch pinned events', data: [] };
+  }
+}
+

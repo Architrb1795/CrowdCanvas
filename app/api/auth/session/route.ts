@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   else if (/Firefox/i.test(userAgent)) browser = 'Firefox';
   else if (/Edge/i.test(userAgent)) browser = 'Edge';
 
-  // Cast to any since database.types.ts hasn't been updated with user_sessions yet
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any).from('user_sessions').insert({
     user_id: user.id,
     device_type: deviceType,

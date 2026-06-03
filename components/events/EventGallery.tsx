@@ -10,9 +10,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface EventGalleryProps {
   initialEvents: EventWithProfile[];
   errorMsg?: string;
+  pinnedEventIds?: string[];
 }
 
-export default function EventGallery({ initialEvents = [], errorMsg }: EventGalleryProps) {
+export default function EventGallery({ initialEvents = [], errorMsg, pinnedEventIds = [] }: EventGalleryProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'popular' | 'media'>('newest');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -67,6 +68,8 @@ export default function EventGallery({ initialEvents = [], errorMsg }: EventGall
       result.sort((a, b) => (b.mediaCount || 0) - (a.mediaCount || 0));
     } else if (activeQuickFilter === 'Public Events') {
       result = result.filter(e => e.is_public);
+    } else if (activeQuickFilter === 'Pinned') {
+      result = result.filter(e => pinnedEventIds.includes(e.id));
     }
 
     // Standard Sort
@@ -81,8 +84,17 @@ export default function EventGallery({ initialEvents = [], errorMsg }: EventGall
       });
     }
 
+    // Always keep pinned events at the top
+    result.sort((a, b) => {
+      const aPinned = pinnedEventIds.includes(a.id);
+      const bPinned = pinnedEventIds.includes(b.id);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      return 0;
+    });
+
     return result;
-  }, [initialEvents, searchTerm, selectedCategory, selectedVisibility, sortBy, activeQuickFilter]);
+  }, [initialEvents, searchTerm, selectedCategory, selectedVisibility, sortBy, activeQuickFilter, pinnedEventIds]);
 
   const handleClearFilters = () => {
     setSearchTerm('');
@@ -93,6 +105,9 @@ export default function EventGallery({ initialEvents = [], errorMsg }: EventGall
   };
 
   const quickFilters = ['Trending', 'Popular', 'Recently Added', 'Most Photos', 'Public Events'];
+  if (pinnedEventIds.length > 0) {
+    quickFilters.unshift('Pinned');
+  }
 
   if (errorMsg) {
     return (
@@ -280,7 +295,7 @@ export default function EventGallery({ initialEvents = [], errorMsg }: EventGall
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.3 }}
               >
-                <EventCard event={event} />
+                <EventCard event={event} isPinned={pinnedEventIds.includes(event.id)} />
               </motion.div>
             ))}
           </AnimatePresence>

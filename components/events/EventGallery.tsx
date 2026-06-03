@@ -5,6 +5,7 @@ import { Search, SlidersHorizontal, XCircle, Inbox, AlertCircle, RefreshCw, Scan
 import { EventWithProfile } from '@/lib/actions/events';
 import EventCard from './EventCard';
 import Link from 'next/link';
+import CreateEventTrigger from './CreateEventTrigger';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface EventGalleryProps {
@@ -262,11 +263,9 @@ export default function EventGallery({ initialEvents = [], errorMsg, pinnedEvent
           <p className="text-base text-slate-500 mb-8 leading-relaxed">
             The platform is empty. Be the first to create an amazing event and start building the community!
           </p>
-          <Link href="/events/create">
-            <button className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-md transition-all">
-              Create First Event
-            </button>
-          </Link>
+          <CreateEventTrigger className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-md transition-all">
+            Create First Event
+          </CreateEventTrigger>
         </div>
       ) : filteredEvents.length === 0 ? (
         <div className="text-center py-20 bg-white border border-slate-200 rounded-3xl shadow-sm">

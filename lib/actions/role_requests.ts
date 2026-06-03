@@ -4,6 +4,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { ServerActionResponse, EventMemberRole } from './event_members';
+import { createNotification } from './notifications';
+import { sendRoleRequestEmail, sendRoleDecisionEmail } from '@/lib/email';
 
 export interface RoleRequest {
   id: string;
@@ -53,8 +55,40 @@ export async function createRoleRequest(eventId: string, requestedRole: EventMem
 
     if (error) throw error;
     
-    // Note: We don't trigger email notifications here as per instructions, 
-    // it will just appear in the admin's settings dashboard.
+    // Get event name and admins to notify
+    const { data: eventData } = await supabase.from('events').select('name').eq('id', eventId).single();
+    const eventName = eventData?.name || 'an event';
+    
+    const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+    const userName = profile?.full_name || 'A user';
+
+    const { data: admins } = await supabase
+      .from('event_members')
+      .select('user_id, profiles(email)')
+      .eq('event_id', eventId)
+      .in('role', ['owner', 'admin']);
+
+    if (admins) {
+      for (const admin of admins) {
+        if (!admin.user_id) continue;
+        await createNotification({
+          user_id: admin.user_id,
+          actor_id: user.id,
+          type: 'role_request',
+          category: 'event',
+          title: 'New Access Request',
+          description: `${userName} requested ${requestedRole} access to ${eventName}.`,
+          action_url: `/events/${eventId}/settings`,
+          icon: 'shield-alert' // Just a fallback, UI will render its own
+        });
+        
+        const adminEmail = (admin.profiles as any)?.email;
+        if (adminEmail) {
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+          await sendRoleRequestEmail(adminEmail, userName, eventName, requestedRole, `${baseUrl}/events/${eventId}/settings`);
+        }
+      }
+    }
     
     revalidatePath(`/events/${eventId}`);
     
@@ -150,6 +184,30 @@ export async function resolveRoleRequest(requestId: string, eventId: string, use
           });
         if (insertError) throw insertError;
       }
+    }
+    
+    // Fetch requester info and event name for notification
+    const { data: eventData } = await supabase.from('events').select('name').eq('id', eventId).single();
+    const eventName = eventData?.name || 'an event';
+    const { data: profile } = await supabase.from('profiles').select('email').eq('id', userId).single();
+    
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // Trigger Notification
+    await createNotification({
+      user_id: userId,
+      actor_id: user?.id,
+      type: action === 'approve' ? 'role_approved' : 'role_rejected',
+      category: 'event',
+      title: action === 'approve' ? 'Access Approved' : 'Access Rejected',
+      description: `Your request for ${requestedRole} access to ${eventName} was ${action}.`,
+      action_url: `/events/${eventId}`,
+      icon: action === 'approve' ? 'check' : 'x'
+    });
+
+    if (profile?.email) {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      await sendRoleDecisionEmail(profile.email, eventName, requestedRole, action === 'approve' ? 'approved' : 'rejected', `${baseUrl}/events/${eventId}`);
     }
     
     revalidatePath(`/events/${eventId}/settings`);

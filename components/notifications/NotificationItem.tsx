@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, MessageCircle, Sparkles, BellRing, ShieldAlert, LogIn } from 'lucide-react';
+import { Heart, MessageCircle, Sparkles, BellRing, ShieldAlert, LogIn, Key, CheckCircle2, XCircle, UserPlus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export interface AppNotification {
@@ -43,6 +43,10 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
       case 'comment': return <MessageCircle className="w-4 h-4 text-amber-400" />;
       case 'security_alert': return <ShieldAlert className="w-4 h-4 text-red-500" />;
       case 'new_login': return <LogIn className="w-4 h-4 text-blue-400" />;
+      case 'role_request': return <Key className="w-4 h-4 text-amber-400" />;
+      case 'role_approved': return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
+      case 'role_rejected': return <XCircle className="w-4 h-4 text-red-400" />;
+      case 'event_invite': return <UserPlus className="w-4 h-4 text-indigo-400" />;
       default: return <BellRing className="w-4 h-4 text-slate-400" />;
     }
   };
@@ -63,6 +67,10 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
       case 'photo_saved': return `${actorName} saved a photo of you`;
       case 'security_alert': return 'Security Alert';
       case 'new_login': return 'New Login Detected';
+      case 'role_request': return 'New Access Request';
+      case 'role_approved': return 'Access Approved';
+      case 'role_rejected': return 'Access Rejected';
+      case 'event_invite': return 'Event Invitation';
       default: return 'New notification';
     }
   };
@@ -77,6 +85,10 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
       case 'photo_saved': return 'A photo you are tagged in was saved.';
       case 'security_alert': return 'Your password was recently changed. If this was not you, please contact support immediately.';
       case 'new_login': return 'A new device logged into your account.';
+      case 'role_request': return 'Someone has requested access to your event.';
+      case 'role_approved': return 'Your request to access the event was approved.';
+      case 'role_rejected': return 'Your request to access the event was rejected.';
+      case 'event_invite': return 'You have been invited to collaborate on an event.';
       default: return '';
     }
   };

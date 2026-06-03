@@ -3,6 +3,8 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { createNotification } from './notifications';
+import { sendEventInviteEmail } from '@/lib/email';
 
 export interface ServerActionResponse<T> {
   success: boolean;
@@ -113,6 +115,30 @@ export async function addEventMember(eventId: string, userId: string, role: Even
       .insert({ event_id: eventId, user_id: userId, role });
 
     if (error) throw error;
+
+    // Trigger Notification
+    const { data: eventData } = await supabase.from('events').select('name').eq('id', eventId).single();
+    const eventName = eventData?.name || 'an event';
+    const { data: profile } = await supabase.from('profiles').select('email').eq('id', userId).single();
+    
+    const { data: { user } } = await supabase.auth.getUser();
+
+    await createNotification({
+      user_id: userId,
+      actor_id: user?.id,
+      type: 'event_invite',
+      category: 'event',
+      title: 'You were invited!',
+      description: `You have been added as ${role} to ${eventName}.`,
+      action_url: `/events/${eventId}`,
+      icon: 'user-plus'
+    });
+
+    if (profile?.email) {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      await sendEventInviteEmail(profile.email, eventName, role, `${baseUrl}/events/${eventId}`);
+    }
+
     revalidatePath(`/events/${eventId}/settings`);
     return { success: true };
   } catch (err: any) {

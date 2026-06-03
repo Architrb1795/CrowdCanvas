@@ -757,8 +757,13 @@ export interface Database {
           id: string
           user_id: string
           actor_id: string | null
-          type: 'tag_request' | 'tag_approved' | 'photo_saved'
+          type: 'tag_request' | 'tag_approved' | 'photo_saved' | 'security_alert' | 'new_login' | 'role_request' | 'role_approved' | 'role_rejected' | 'event_invite'
           media_id: string | null
+          category?: string | null
+          title?: string | null
+          description?: string | null
+          action_url?: string | null
+          icon?: string | null
           is_read: boolean | null
           created_at: string
         }
@@ -766,8 +771,13 @@ export interface Database {
           id?: string
           user_id: string
           actor_id?: string | null
-          type: 'tag_request' | 'tag_approved' | 'photo_saved'
+          type: 'tag_request' | 'tag_approved' | 'photo_saved' | 'security_alert' | 'new_login' | 'role_request' | 'role_approved' | 'role_rejected' | 'event_invite'
           media_id?: string | null
+          category?: string | null
+          title?: string | null
+          description?: string | null
+          action_url?: string | null
+          icon?: string | null
           is_read?: boolean | null
           created_at?: string
         }
@@ -775,8 +785,13 @@ export interface Database {
           id?: string
           user_id?: string
           actor_id?: string | null
-          type?: 'tag_request' | 'tag_approved' | 'photo_saved'
+          type?: 'tag_request' | 'tag_approved' | 'photo_saved' | 'security_alert' | 'new_login' | 'role_request' | 'role_approved' | 'role_rejected' | 'event_invite'
           media_id?: string | null
+          category?: string | null
+          title?: string | null
+          description?: string | null
+          action_url?: string | null
+          icon?: string | null
           is_read?: boolean | null
           created_at?: string
         }
@@ -816,7 +831,7 @@ export interface Database {
       event_member_role: 'owner' | 'admin' | 'uploader' | 'viewer'
       share_type_enum: 'copy_link' | 'whatsapp' | 'twitter' | 'facebook' | 'download'
       tag_status: 'pending' | 'approved' | 'rejected' | 'removed'
-      notification_type: 'tag_request' | 'tag_approved' | 'photo_saved'
+      notification_type: 'tag_request' | 'tag_approved' | 'photo_saved' | 'security_alert' | 'new_login' | 'role_request' | 'role_approved' | 'role_rejected' | 'event_invite'
     }
     CompositeTypes: {
       [_ in never]: never

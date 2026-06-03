@@ -385,8 +385,12 @@ export default function EventSettingsClient({ eventId, event, initialMembers, in
                   {members.map(member => (
                     <div key={member.id} className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold shrink-0">
-                          {member.profiles?.full_name?.charAt(0) || '?'}
+                        <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold shrink-0 overflow-hidden">
+                          {member.profiles?.avatar_url ? (
+                            <img src={member.profiles.avatar_url} alt={member.profiles?.full_name || 'User'} className="w-full h-full object-cover" />
+                          ) : (
+                            member.profiles?.full_name?.charAt(0) || '?'
+                          )}
                         </div>
                         <div>
                           <div className="text-sm font-bold text-white flex items-center gap-2">
@@ -470,9 +474,18 @@ export default function EventSettingsClient({ eventId, event, initialMembers, in
                     <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                       {searchResults.map(user => (
                         <div key={user.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-white/5 hover:border-indigo-500/30 transition-colors">
-                          <div className="truncate pr-3">
-                            <div className="text-sm font-semibold text-white truncate">{user.full_name}</div>
-                            <div className="text-xs text-slate-400 truncate">{user.email}</div>
+                          <div className="flex items-center gap-3 truncate pr-3">
+                            <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold shrink-0 overflow-hidden">
+                              {user.avatar_url ? (
+                                <img src={user.avatar_url} alt={user.full_name || 'User'} className="w-full h-full object-cover" />
+                              ) : (
+                                user.full_name?.charAt(0) || '?'
+                              )}
+                            </div>
+                            <div className="truncate">
+                              <div className="text-sm font-semibold text-white truncate">{user.full_name}</div>
+                              <div className="text-xs text-slate-400 truncate">{user.email}</div>
+                            </div>
                           </div>
                           <Button
                             size="sm"
@@ -520,8 +533,12 @@ export default function EventSettingsClient({ eventId, event, initialMembers, in
                 {requests.map(request => (
                   <div key={request.id} className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold shrink-0">
-                        {request.profiles?.full_name?.charAt(0) || '?'}
+                      <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold shrink-0 overflow-hidden">
+                        {request.profiles?.avatar_url ? (
+                          <img src={request.profiles.avatar_url} alt={request.profiles?.full_name || 'User'} className="w-full h-full object-cover" />
+                        ) : (
+                          request.profiles?.full_name?.charAt(0) || '?'
+                        )}
                       </div>
                       <div>
                         <div className="text-sm font-bold text-white">{request.profiles?.full_name || 'Unknown User'}</div>

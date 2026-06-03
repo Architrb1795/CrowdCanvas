@@ -4,6 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, CalendarPlus, Search, ArrowRight, Activity, Users, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
+import CreateEventTrigger from './CreateEventTrigger';
 
 export default function EventHero() {
   return (
@@ -57,13 +58,11 @@ export default function EventHero() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4"
           >
-            <Link href="/events/create" className="w-full sm:w-auto">
-              <button className="w-full sm:w-auto group relative flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-all overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                <CalendarPlus className="w-4.5 h-4.5" />
-                Create Event
-              </button>
-            </Link>
+            <CreateEventTrigger className="w-full sm:w-auto group relative flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-all overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              <CalendarPlus className="w-4.5 h-4.5" />
+              Create Event
+            </CreateEventTrigger>
             
             <button 
               onClick={() => document.getElementById('discovery-panel')?.scrollIntoView({ behavior: 'smooth' })}

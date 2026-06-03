@@ -16,7 +16,7 @@ CREATE TYPE user_role AS ENUM ('admin', 'photographer', 'member', 'viewer');
 CREATE TYPE event_member_role AS ENUM ('owner', 'admin', 'uploader', 'viewer');
 CREATE TYPE share_type_enum AS ENUM ('copy_link', 'whatsapp', 'twitter', 'facebook', 'download');
 CREATE TYPE tag_status AS ENUM ('pending', 'approved', 'rejected', 'removed');
-CREATE TYPE notification_type AS ENUM ('tag_request', 'tag_approved', 'photo_saved', 'security_alert', 'new_login');
+CREATE TYPE notification_type AS ENUM ('tag_request', 'tag_approved', 'photo_saved', 'security_alert', 'new_login', 'role_request', 'role_approved', 'role_rejected', 'event_invite');
 CREATE TYPE notification_category AS ENUM ('social', 'media', 'event', 'ai', 'system');
 
 -- ==========================================

@@ -47,6 +47,9 @@ export default async function EventDetailPage(props: { params: Promise<{ id: str
   let hasAccess = event.is_public;
   let memberRole = null;
   
+  let canUpload = false;
+  let hasPendingRequest = false;
+
   if (user) {
     const { data: member } = await supabase
       .from('event_members')
@@ -58,6 +61,20 @@ export default async function EventDetailPage(props: { params: Promise<{ id: str
     if (member) {
       hasAccess = true;
       memberRole = member.role;
+      if (['owner', 'admin', 'uploader'].includes(memberRole)) {
+        canUpload = true;
+      }
+    }
+
+    if (!canUpload) {
+      const { data: pending } = await supabase
+        .from('event_role_requests')
+        .select('id')
+        .eq('event_id', eventId)
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .single();
+      hasPendingRequest = !!pending;
     }
   }
 
@@ -80,6 +97,8 @@ export default async function EventDetailPage(props: { params: Promise<{ id: str
         event={event} 
         mediaItems={mediaItems || []} 
         canManageEvent={canManageEvent} 
+        canUpload={canUpload}
+        hasPendingRequest={hasPendingRequest}
         currentUserId={user?.id}
         watermarkedDownloadsCount={watermarkedDownloadsCount}
       />

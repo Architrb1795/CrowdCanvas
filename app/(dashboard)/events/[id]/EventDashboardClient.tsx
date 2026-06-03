@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation';
 
 import MediaGalleryGrid from '@/components/media/MediaGalleryGrid';
 import AnalyticsDashboard from '@/components/ai/AnalyticsDashboard';
-import { Calendar, Settings, Share2, Users, MapPin, Image as ImageIcon, Sparkles, BarChart3, Clock, LayoutGrid, Loader2, PlayCircle, Lock, Globe, AlertCircle } from 'lucide-react';
+import { Calendar, Settings, Share2, Users, MapPin, Image as ImageIcon, Sparkles, BarChart3, Clock, LayoutGrid, Loader2, PlayCircle, Lock, Globe, AlertCircle, UploadCloud } from 'lucide-react';
 import Link from 'next/link';
+import RequestAccessButton from '@/components/events/RequestAccessButton';
 
 // Custom tabs if generic UI doesn't exist
 function TabButton({ active, onClick, icon: Icon, label }: any) {
@@ -30,6 +31,8 @@ interface EventDashboardClientProps {
    
   mediaItems: any[];
   canManageEvent: boolean;
+  canUpload?: boolean;
+  hasPendingRequest?: boolean;
   currentUserId?: string;
   watermarkedDownloadsCount?: number;
 }
@@ -38,6 +41,8 @@ export default function EventDashboardClient({
   event, 
   mediaItems, 
   canManageEvent,
+  canUpload = false,
+  hasPendingRequest = false,
   currentUserId,
   watermarkedDownloadsCount = 0
 }: EventDashboardClientProps) {
@@ -81,6 +86,16 @@ export default function EventDashboardClient({
           <p className="text-slate-400">{event.description || 'No description provided.'}</p>
         </div>
         <div className="flex items-center gap-3">
+          {!canUpload ? (
+            <RequestAccessButton eventId={event.id} hasPending={hasPendingRequest} />
+          ) : (
+            <Link 
+              href={`/upload`}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20"
+            >
+              <UploadCloud className="w-4 h-4" /> Upload
+            </Link>
+          )}
           {canManageEvent && (
             <Link 
               href={`/events/${event.id}/settings`}

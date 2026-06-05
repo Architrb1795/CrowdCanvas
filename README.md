@@ -66,9 +66,29 @@ CrowdCanvas is packed with features designed to handle media intelligently while
 
 CrowdCanvas uses a modern, serverless-first architecture optimized for performance and AI capabilities.
 
-<div align="center">
-  <img src="https://via.placeholder.com/800x400/0f172a/4f46e5?text=Architecture+Diagram+Placeholder" alt="Architecture Flow">
-</div>
+```mermaid
+graph TD
+    Client[Client Browser / Mobile] --> |HTTPS| NextJS[Next.js 16 App Router]
+    
+    subgraph Frontend [React Server Components]
+        NextJS --> UI[Tailwind + Framer Motion]
+        NextJS --> SA[Server Actions / API Routes]
+    end
+    
+    subgraph Backend [Serverless & Services]
+        SA --> |Auth & Queries| Supabase[(Supabase PostgreSQL)]
+        SA --> |Media Upload| Cloudinary[Cloudinary CDN]
+        SA --> |Notification Dispatch| Resend[Resend API]
+    end
+    
+    subgraph AI Pipeline [Edge & Local AI]
+        SA --> FaceAPI["@vladmandic/face-api"]
+        SA --> Transformers["@xenova/transformers"]
+        SA --> Gemini["Google Gemini GenAI"]
+    end
+    
+    Supabase -.-> |pgvector| Transformers
+```
 
 * **Frontend Architecture:** Built on **Next.js 16 (App Router)** leveraging React Server Components (RSC) for minimal client bundles. UI is styled with **Tailwind CSS v4** and animated using **Framer Motion**.
 * **Backend Architecture:** Server Actions and API Routes handle secure data mutations, bridging the gap between the UI and database without exposing credentials.

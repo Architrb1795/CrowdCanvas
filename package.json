@@ -1,7 +1,22 @@
 {
-  "name": "event-media-platform",
+  "name": "crowdcanvas",
   "version": "0.1.0",
   "private": true,
+  "author": "Archit Bagayatkar",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Architrb1795/crowdcanvas.git"
+  },
+  "homepage": "https://crowdcanvas.vercel.app",
+  "keywords": [
+    "nextjs",
+    "supabase",
+    "ai",
+    "facial-recognition",
+    "event-management",
+    "photography",
+    "oauth"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",

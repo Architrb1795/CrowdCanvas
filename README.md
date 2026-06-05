@@ -211,7 +211,7 @@ For production deployment checklists, caching strategies, and environment setup,
 
 ## 🤝 Contributing
 
-We welcome contributions! Please review our [Contribution Guidelines](CONTRIBUTING.md) (coming soon) and read through the `docs/` folder to understand the architecture before submitting a Pull Request.
+We welcome contributions! Please review our [Contribution Guidelines](CONTRIBUTING.md) and read through the `docs/` folder to understand the architecture before submitting a Pull Request.
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)

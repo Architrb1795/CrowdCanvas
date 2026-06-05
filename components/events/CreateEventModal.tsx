@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { X, Calendar, FileText, Tag, Shield, Loader2, AlertCircle, CheckCircle2, MapPin, Image as ImageIcon, Search, UserPlus } from 'lucide-react';
+import { X, Calendar, FileText, Tag, Shield, Loader2, AlertCircle, CheckCircle2, MapPin, Image as ImageIcon, Search, UserPlus, Upload } from 'lucide-react';
+import { CldUploadWidget } from 'next-cloudinary';
 import { createEvent } from '@/lib/actions/events';
 import { searchUsers, ProfileSearch } from '@/lib/actions/event_members';
 import { Button } from '@/components/ui/Button';
@@ -293,14 +294,62 @@ export default function CreateEventModal({ isOpen, onClose }: CreateEventModalPr
                 <ImageIcon className="w-4 h-4 text-slate-400" />
                 Cover Image URL <span className="text-slate-400 font-normal">(Optional)</span>
               </label>
-              <input
-                id="event-cover"
-                type="url"
-                placeholder="https://example.com/image.jpg"
-                value={coverUrl}
-                onChange={(e) => setCoverUrl(e.target.value)}
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-all focus:ring-2 focus:ring-indigo-100 placeholder:text-slate-400"
-              />
+              <div className="flex flex-col gap-2">
+                <CldUploadWidget
+                  uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'crowdcanvas_unsigned'}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  onSuccess={(result: any, { widget }: any) => {
+                    if (result.info && result.info.secure_url) {
+                      setCoverUrl(result.info.secure_url);
+                      widget.close();
+                    }
+                  }}
+                  options={{
+                    maxFiles: 1,
+                    resourceType: 'image',
+                    clientAllowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
+                    maxFileSize: 5000000,
+                  }}
+                >
+                  {({ open }) => (
+                    <button
+                      type="button"
+                      onClick={() => open()}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 border-2 border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 rounded-xl text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-all focus:outline-none"
+                    >
+                      <Upload className="w-4 h-4" />
+                      {coverUrl ? 'Change Cover Image' : 'Upload Cover Image'}
+                    </button>
+                  )}
+                </CldUploadWidget>
+                
+                <div className="flex items-center gap-3 mt-1">
+                  <div className="h-px bg-slate-200 flex-1"></div>
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">OR</span>
+                  <div className="h-px bg-slate-200 flex-1"></div>
+                </div>
+                
+                <input
+                  type="url"
+                  placeholder="Paste image URL..."
+                  value={coverUrl}
+                  onChange={(e) => setCoverUrl(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-indigo-500 rounded-xl text-sm text-slate-900 outline-none transition-colors"
+                />
+
+                {coverUrl && (
+                  <div className="relative mt-2 w-full h-32 rounded-xl overflow-hidden border border-slate-200">
+                    <img src={coverUrl} alt="Cover Preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setCoverUrl('')}
+                      className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 text-white rounded-lg transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="space-y-1.5">

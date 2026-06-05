@@ -13,6 +13,7 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [imageError, setImageError] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -85,8 +86,13 @@ const Navbar = () => {
                 <div className="relative group">
                   <button className="flex items-center gap-2 p-1 pl-2 pr-3 bg-slate-900/50 hover:bg-slate-800 border border-white/5 rounded-full transition-colors focus:outline-none">
                     <div className="w-7 h-7 rounded-full bg-indigo-500/20 flex items-center justify-center overflow-hidden border border-indigo-500/30">
-                      {user.user_metadata?.avatar_url ? (
-                        <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                      {user.user_metadata?.avatar_url && !imageError ? (
+                        <img 
+                          src={user.user_metadata.avatar_url} 
+                          alt="Avatar" 
+                          className="w-full h-full object-cover" 
+                          onError={() => setImageError(true)}
+                        />
                       ) : (
                         <User className="w-4 h-4 text-indigo-400" />
                       )}

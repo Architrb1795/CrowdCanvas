@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/Button';
 export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUserId }: { mediaItems: any[], canManageEvent?: boolean, currentUserId?: string }) {
   const router = useRouter();
    
+  const [localMediaItems, setLocalMediaItems] = useState<any[]>(mediaItems || []);
   const [selectedMedia, setSelectedMedia] = useState<any | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editFilter, setEditFilter] = useState<string>('');
@@ -47,17 +48,21 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [showAllRecommendations, setShowAllRecommendations] = useState(false);
 
-  const selectedIndex = selectedMedia ? mediaItems.findIndex(m => m.id === selectedMedia.id) : -1;
+  const selectedIndex = selectedMedia ? localMediaItems.findIndex(m => m.id === selectedMedia.id) : -1;
 
   const handlePrev = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (selectedIndex > 0) setSelectedMedia(mediaItems[selectedIndex - 1]);
+    if (selectedIndex > 0) setSelectedMedia(localMediaItems[selectedIndex - 1]);
   };
 
   const handleNext = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (selectedIndex < mediaItems.length - 1) setSelectedMedia(mediaItems[selectedIndex + 1]);
+    if (selectedIndex < localMediaItems.length - 1) setSelectedMedia(localMediaItems[selectedIndex + 1]);
   };
+
+  useEffect(() => {
+    setLocalMediaItems(mediaItems || []);
+  }, [mediaItems]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -74,14 +79,14 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
       if (isEditing) return;
 
       if (e.key === 'ArrowLeft' && selectedIndex > 0) {
-        setSelectedMedia(mediaItems[selectedIndex - 1]);
-      } else if (e.key === 'ArrowRight' && selectedIndex < mediaItems.length - 1) {
-        setSelectedMedia(mediaItems[selectedIndex + 1]);
+        setSelectedMedia(localMediaItems[selectedIndex - 1]);
+      } else if (e.key === 'ArrowRight' && selectedIndex < localMediaItems.length - 1) {
+        setSelectedMedia(localMediaItems[selectedIndex + 1]);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedMedia, isEditing, selectedIndex, mediaItems, showComments, showShare, showDeleteConfirm, showBulkDeleteConfirm, errorDialog]);
+  }, [selectedMedia, isEditing, selectedIndex, localMediaItems, showComments, showShare, showDeleteConfirm, showBulkDeleteConfirm, errorDialog]);
 
   useEffect(() => {
     if (selectedMedia && !isEditing) {
@@ -160,16 +165,20 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
     setShowBulkDeleteConfirm(false);
     startTransition(async () => {
       let failed = 0;
+      const idsToDelete: string[] = [];
       for (const id of selectedIds) {
-        const item = mediaItems.find(m => m.id === id);
+        const item = localMediaItems.find(m => m.id === id);
         if (item) {
-          const res = await deleteMedia(id, item.event_id);
+          const res = await deleteMedia(id, item.event_id || '');
           if (!res.success) failed++;
+          else idsToDelete.push(id);
         }
       }
       if (failed > 0) setErrorDialog(`Failed to delete ${failed} items.`);
+      setLocalMediaItems(prev => prev.filter(m => !idsToDelete.includes(m.id)));
       setSelectedIds([]);
       setIsSelectionMode(false);
+      router.refresh();
     });
   };
 
@@ -265,9 +274,11 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
     if (!selectedMedia) return;
     setShowDeleteConfirm(false);
     startTransition(async () => {
-      const res = await deleteMedia(selectedMedia.id, selectedMedia.event_id);
+      const res = await deleteMedia(selectedMedia.id, selectedMedia.event_id || '');
       if (res.success) {
+        setLocalMediaItems(prev => prev.filter(m => m.id !== selectedMedia.id));
         setSelectedMedia(null);
+        router.refresh();
       } else {
         setErrorDialog(res.error || 'Failed to delete media');
       }
@@ -277,9 +288,12 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
   const handleToggleVisibility = async () => {
     if (!selectedMedia) return;
     startTransition(async () => {
-      const res = await toggleMediaVisibility(selectedMedia.id, selectedMedia.event_id, !selectedMedia.is_private);
+      const res = await toggleMediaVisibility(selectedMedia.id, selectedMedia.event_id || '', !selectedMedia.is_private);
       if (res.success) {
-        setSelectedMedia({ ...selectedMedia, is_private: !selectedMedia.is_private });
+        const updated = { ...selectedMedia, is_private: !selectedMedia.is_private };
+        setSelectedMedia(updated);
+        setLocalMediaItems(prev => prev.map(m => m.id === updated.id ? updated : m));
+        router.refresh();
       } else {
         setErrorDialog(res.error || 'Failed to toggle visibility');
       }
@@ -326,7 +340,7 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
 
   const canEditOrDelete = canManageEvent || selectedMedia?.uploaded_by === currentUserId;
 
-  if (!mediaItems || mediaItems.length === 0) {
+  if (!localMediaItems || localMediaItems.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-slate-900/30 rounded-3xl border border-slate-800 border-dashed">
         <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mb-6">
@@ -415,7 +429,7 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
       )}
 
       <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6 space-y-6">
-        {mediaItems?.map((media) => (
+        {localMediaItems?.map((media) => (
           <div 
             key={media.id} 
             onClick={(e) => {
@@ -544,7 +558,7 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
               )}
               
               {/* Right Navigation */}
-              {selectedIndex >= 0 && selectedIndex < mediaItems.length - 1 && (
+              {selectedIndex >= 0 && selectedIndex < localMediaItems.length - 1 && (
                 <button 
                   onClick={handleNext}
                   className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/40 hover:bg-black/70 text-white rounded-full backdrop-blur-md transition-all hover:scale-110"
@@ -654,7 +668,7 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
                                 currentUserId={currentUserId}
                                 position={idx}
                                 onClick={() => {
-                                  const fullMedia = mediaItems.find(m => m.id === media.id);
+                                  const fullMedia = localMediaItems.find(m => m.id === media.id);
                                   if (fullMedia) setSelectedMedia(fullMedia);
                                 }}
                              />
@@ -705,7 +719,7 @@ export default function MediaGalleryGrid({ mediaItems, canManageEvent, currentUs
                   currentUserId={currentUserId}
                   position={idx}
                   onClick={() => {
-                    const fullMedia = mediaItems.find(m => m.id === media.id);
+                    const fullMedia = localMediaItems.find(m => m.id === media.id);
                     if (fullMedia) {
                       setSelectedMedia(fullMedia);
                       setShowAllRecommendations(false);

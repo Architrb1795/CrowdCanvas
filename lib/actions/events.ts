@@ -259,10 +259,10 @@ export async function updateEventDetails(
         cover_url: cover_url ? cover_url.trim() : null,
         is_public,
         ...(watermark_enabled !== undefined && { watermark_enabled }),
-        ...(watermark_text !== undefined && { watermark_text: watermark_text.trim() }),
-        ...(watermark_style !== undefined && { watermark_style }),
-        ...(watermark_opacity !== undefined && { watermark_opacity }),
-        ...(watermark_size !== undefined && { watermark_size }),
+        ...(watermark_text != null && { watermark_text: watermark_text.trim() }),
+        ...(watermark_style != null && { watermark_style }),
+        ...(watermark_opacity != null && { watermark_opacity }),
+        ...(watermark_size != null && { watermark_size }),
       })
       .eq('id', eventId);
 
@@ -409,3 +409,49 @@ export async function getPinnedEvents(): Promise<ServerActionResponse<string[]>>
   }
 }
 
+export async function deleteEvent(eventId: string): Promise<ServerActionResponse<void>> {
+  try {
+    const supabase = await createClient();
+    
+    // Check current authenticated session
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: 'Unauthorized. Please sign in to manage events.' };
+    }
+
+    // Check permissions - must be owner
+    const { data: memberData } = await supabase
+      .from('event_members')
+      .select('role')
+      .eq('event_id', eventId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (!memberData || memberData.role !== 'owner') {
+      return { success: false, error: 'Unauthorized. Only the event owner can delete the event.' };
+    }
+
+    // Use service role to bypass RLS and delete the event safely
+    const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
+    const adminSupabase = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { error: deleteError } = await adminSupabase
+      .from('events')
+      .delete()
+      .eq('id', eventId);
+
+    if (deleteError) {
+      throw deleteError;
+    }
+
+    revalidatePath('/events');
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('Delete Event Error:', err);
+    return { success: false, error: err.message || 'Failed to delete event' };
+  }
+}

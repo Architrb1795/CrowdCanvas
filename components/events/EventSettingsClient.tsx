@@ -7,9 +7,10 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useGlobalDialog } from '@/components/providers/GlobalDialogProvider';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
-import { Search, UserPlus, Shield, X, ShieldAlert, Star, Settings as SettingsIcon, AlertCircle, CheckCircle2, Calendar, FileText, Tag, Loader2, Key, Check, Droplets } from 'lucide-react';
+import { Search, UserPlus, Shield, X, ShieldAlert, Star, Settings as SettingsIcon, AlertCircle, CheckCircle2, Calendar, FileText, Tag, Loader2, Key, Check, Droplets, Image as ImageIcon, Upload } from 'lucide-react';
+import { CldUploadWidget } from 'next-cloudinary';
 import { EventMember, ProfileSearch, searchUsers, addEventMember, updateEventMemberRole, removeEventMember, transferOwnership, EventMemberRole } from '@/lib/actions/event_members';
-import { updateEventDetails, updateEventWatermark } from '@/lib/actions/events';
+import { updateEventDetails, updateEventWatermark, deleteEvent } from '@/lib/actions/events';
 import { resolveRoleRequest, RoleRequest } from '@/lib/actions/role_requests';
 import { useRouter } from 'next/navigation';
 
@@ -32,6 +33,11 @@ export default function EventSettingsClient({ eventId, event, initialMembers, in
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<ProfileSearch[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  
+  // Delete Event State
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
   // General Settings State
@@ -39,6 +45,7 @@ export default function EventSettingsClient({ eventId, event, initialMembers, in
   const [description, setDescription] = useState(event.description || '');
   const [eventDate, setEventDate] = useState(event.event_date ? new Date(event.event_date).toISOString().slice(0, 16) : '');
   const [category, setCategory] = useState(event.category || 'workshop');
+  const [coverUrl, setCoverUrl] = useState(event.cover_url || '');
   const [isPublic, setIsPublic] = useState(event.is_public ?? true);
   
   const [isSubmittingGeneral, setIsSubmittingGeneral] = useState(false);
@@ -63,6 +70,7 @@ export default function EventSettingsClient({ eventId, event, initialMembers, in
     setDescription(event.description || '');
     setEventDate(event.event_date ? new Date(event.event_date).toISOString().slice(0, 16) : '');
     setCategory(event.category || 'workshop');
+    setCoverUrl(event.cover_url || '');
     setIsPublic(event.is_public ?? true);
 
     setWatermarkEnabled(event.watermark_enabled ?? false);
@@ -106,6 +114,7 @@ export default function EventSettingsClient({ eventId, event, initialMembers, in
     formData.append('description', description);
     formData.append('event_date', eventDate);
     formData.append('category', category);
+    formData.append('cover_url', coverUrl);
     formData.append('is_public', String(isPublic));
 
     const res = await updateEventDetails(eventId, formData);
@@ -116,6 +125,22 @@ export default function EventSettingsClient({ eventId, event, initialMembers, in
       setGeneralError(res.error || 'Failed to update event details.');
     }
     setIsSubmittingGeneral(false);
+  };
+
+  const handleDeleteEvent = async () => {
+    if (deleteConfirmText !== event.name) {
+      setGeneralError('Event name does not match.');
+      return;
+    }
+    
+    setIsDeleting(true);
+    const res = await deleteEvent(eventId);
+    if (res.success) {
+      router.push('/events');
+    } else {
+      setGeneralError(res.error || 'Failed to delete event.');
+      setIsDeleting(false);
+    }
   };
 
   const handleSearch = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -322,6 +347,69 @@ export default function EventSettingsClient({ eventId, event, initialMembers, in
                 />
               </div>
 
+              <div className="space-y-1.5">
+                <label className="text-sm font-bold text-slate-300 flex items-center gap-1.5">
+                  <ImageIcon className="w-4 h-4 text-slate-400" />
+                  Cover Image
+                </label>
+                <div className="flex flex-col gap-2">
+                  <CldUploadWidget
+                    uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'crowdcanvas_unsigned'}
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    onSuccess={(result: any, { widget }: any) => {
+                      if (result.info && result.info.secure_url) {
+                        setCoverUrl(result.info.secure_url);
+                        widget.close();
+                      }
+                    }}
+                    options={{
+                      maxFiles: 1,
+                      resourceType: 'image',
+                      clientAllowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
+                      maxFileSize: 5000000,
+                    }}
+                  >
+                    {({ open }) => (
+                      <button
+                        type="button"
+                        onClick={() => open()}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-950 border-2 border-dashed border-slate-700 hover:border-indigo-500 hover:bg-slate-900 rounded-xl text-sm font-semibold text-slate-300 transition-all focus:outline-none"
+                      >
+                        <Upload className="w-4 h-4" />
+                        {coverUrl ? 'Change Cover Image' : 'Upload Cover Image'}
+                      </button>
+                    )}
+                  </CldUploadWidget>
+
+                  <div className="flex items-center gap-3 mt-1">
+                    <div className="h-px bg-slate-800 flex-1"></div>
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">OR</span>
+                    <div className="h-px bg-slate-800 flex-1"></div>
+                  </div>
+                  
+                  <input
+                    type="url"
+                    placeholder="Paste image URL..."
+                    value={coverUrl}
+                    onChange={(e) => setCoverUrl(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-900/50 border border-slate-700 focus:border-indigo-500 rounded-xl text-sm text-slate-200 outline-none transition-colors"
+                  />
+
+                  {coverUrl && (
+                    <div className="relative mt-2 w-full h-40 rounded-xl overflow-hidden border border-slate-700">
+                      <img src={coverUrl} alt="Cover Preview" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setCoverUrl('')}
+                        className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 text-white rounded-lg transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="bg-slate-900 border border-white/5 rounded-xl p-4 flex items-center justify-between gap-4">
                 <div className="flex items-start gap-3">
                   <Shield className="w-5 h-5 text-slate-400 mt-0.5" />
@@ -366,6 +454,72 @@ export default function EventSettingsClient({ eventId, event, initialMembers, in
               </div>
             </form>
           </Card>
+
+          {/* Danger Zone */}
+          {currentUserRole === 'owner' && (
+            <Card className="max-w-3xl mt-6 p-6 border-rose-500/20 bg-rose-950/10 space-y-6">
+              <div className="border-b border-rose-500/20 pb-4">
+                <h3 className="text-lg font-bold text-rose-500 flex items-center gap-2">
+                  <ShieldAlert className="w-5 h-5" />
+                  Danger Zone
+                </h3>
+                <p className="text-sm text-rose-400/80 mt-1">Irreversible and destructive actions.</p>
+              </div>
+
+              <div className="bg-slate-900/50 border border-rose-500/20 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-white">Delete this event</h4>
+                  <p className="text-xs text-slate-400 mt-1 max-w-md">Once you delete an event, there is no going back. Please be certain.</p>
+                </div>
+                <Button 
+                  type="button" 
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-500/20 transition-all shrink-0"
+                >
+                  Delete Event
+                </Button>
+              </div>
+
+              {showDeleteConfirm && (
+                <div className="bg-slate-900 border border-rose-500/30 rounded-xl p-5 space-y-4 animate-in fade-in slide-in-from-top-2">
+                  <p className="text-sm text-slate-300">
+                    This action <strong className="text-rose-400">cannot</strong> be undone. This will permanently delete the <strong className="text-white">{event.name}</strong> event, all associated media, members, and metadata.
+                  </p>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-400">
+                      Please type <strong className="text-rose-400 select-all">{event.name}</strong> to confirm.
+                    </label>
+                    <input
+                      type="text"
+                      value={deleteConfirmText}
+                      onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      className="w-full px-4 py-2 bg-slate-950 border border-rose-500/30 focus:border-rose-500 rounded-lg text-sm text-slate-200 outline-none"
+                    />
+                  </div>
+                  <div className="flex gap-3 justify-end pt-2">
+                    <Button 
+                      type="button" 
+                      onClick={() => {
+                        setShowDeleteConfirm(false);
+                        setDeleteConfirmText('');
+                      }}
+                      className="bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700"
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="button" 
+                      onClick={handleDeleteEvent}
+                      disabled={deleteConfirmText !== event.name || isDeleting}
+                      className="bg-rose-600 text-white hover:bg-rose-500 disabled:opacity-50"
+                    >
+                      {isDeleting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Deleting...</> : 'I understand the consequences, delete this event'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="members">

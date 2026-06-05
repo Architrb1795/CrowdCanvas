@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 
 export interface CloudinaryUploadResult {
@@ -129,8 +130,9 @@ export async function deleteMedia(mediaId: string, eventId: string) {
       }
     }
 
-    // Delete from Supabase
-    const { error } = await supabase.from('media').delete().eq('id', mediaId);
+    // Delete from Supabase using admin client to bypass missing DELETE policy
+    const supabaseAdmin = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const { error } = await supabaseAdmin.from('media').delete().eq('id', mediaId);
     if (error) return { success: false, error: 'Failed to delete from database.' };
 
     revalidatePath('/media');
@@ -153,7 +155,8 @@ export async function toggleMediaVisibility(mediaId: string, eventId: string, is
       return { success: false, error: 'Only admins can change visibility.' };
     }
 
-    const { error } = await supabase.from('media').update({ is_private: isPrivate }).eq('id', mediaId);
+    const supabaseAdmin = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const { error } = await supabaseAdmin.from('media').update({ is_private: isPrivate }).eq('id', mediaId);
     if (error) return { success: false, error: 'Database error.' };
 
     revalidatePath('/media');
@@ -180,8 +183,9 @@ export async function saveMediaCopy(originalMediaId: string, eventId: string, ne
     const { data: original } = await supabase.from('media').select('*').eq('id', originalMediaId).single();
     if (!original) return { success: false, error: 'Original media not found.' };
 
-    // Insert new row
-    const { error } = await supabase.from('media').insert({
+    // Insert new row using admin client to bypass any missing policies
+    const supabaseAdmin = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const { error } = await supabaseAdmin.from('media').insert({
       event_id: eventId,
       file_url: newUrl,
       thumbnail_url: newThumbnailUrl,

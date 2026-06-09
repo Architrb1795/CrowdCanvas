@@ -5,7 +5,7 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Download, Share2, ScanFace, Calendar, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { Download, Share2, ScanFace, Calendar, Image as ImageIcon, Sparkles, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -35,19 +35,18 @@ export function MyPhotosClient({ groupedEvents }: { groupedEvents: EventGroup[] 
   };
 
   const getConfidenceTier = (score: number) => {
-    // Convert cosine distance (0-1) to confidence %
     const conf = score * 100;
-    if (conf >= 95) return { label: 'High Match', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' };
-    if (conf >= 85) return { label: 'Good Match', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' };
+    if (conf >= 90) return { label: 'High Match', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' };
+    if (conf >= 75) return { label: 'Good Match', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' };
     return { label: 'Possible Match', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' };
   };
 
   const filteredEvents = groupedEvents.map(event => {
     const filteredPhotos = event.photos.filter(photo => {
       const conf = photo.similarity * 100;
-      if (filter === 'high') return conf >= 95;
-      if (filter === 'medium') return conf >= 85;
-      return conf >= 70; // Hide <70% automatically
+      if (filter === 'high') return conf >= 90;
+      if (filter === 'medium') return conf >= 75;
+      return conf >= 60; // Hide <60% automatically
     });
     return { ...event, photos: filteredPhotos };
   }).filter(e => e.photos.length > 0);
@@ -57,10 +56,19 @@ export function MyPhotosClient({ groupedEvents }: { groupedEvents: EventGroup[] 
   if (groupedEvents.length === 0) {
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <SectionHeader 
-          title="My Photos" 
-          subtitle="Your personalized gallery powered by AI." 
-        />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <SectionHeader 
+            title="My Photos" 
+            subtitle="Your personalized gallery powered by AI." 
+            className="mb-0"
+          />
+          <Link href="/profile">
+            <Button variant="outline" className="bg-slate-900/50 border-indigo-500/30 text-indigo-400 hover:text-indigo-300">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Rescan Photos
+            </Button>
+          </Link>
+        </div>
         
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-slate-900/30 rounded-3xl border border-slate-800 border-dashed">
           <div className="w-20 h-20 bg-indigo-500/10 rounded-full flex items-center justify-center mb-6">
@@ -68,11 +76,18 @@ export function MyPhotosClient({ groupedEvents }: { groupedEvents: EventGroup[] 
           </div>
           <h3 className="text-2xl font-bold text-white mb-3">No Photos Found Yet</h3>
           <p className="text-slate-400 max-w-md mb-8">
-            Your face profile is active, but we haven&apos;t found any matches in your events yet. As new photos are uploaded, they will automatically appear here!
+            Your face profile is active, but we haven&apos;t found any matches in your events yet. If you recently uploaded photos or just set up your profile, try running a manual rescan.
           </p>
-          <Button variant="gradient" onClick={() => window.location.href = '/events'}>
-            Browse Events
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Button variant="gradient" onClick={() => window.location.href = '/events'}>
+              Browse Events
+            </Button>
+            <Link href="/profile">
+              <Button variant="outline" className="w-full">
+                Go to Profile Settings
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -101,6 +116,12 @@ export function MyPhotosClient({ groupedEvents }: { groupedEvents: EventGroup[] 
             High Confidence
           </button>
         </div>
+        <Link href="/profile">
+          <Button variant="outline" className="bg-slate-900/50 border-indigo-500/30 text-indigo-400 hover:text-indigo-300">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Rescan Photos
+          </Button>
+        </Link>
       </div>
 
       {filteredEvents.map((event) => (

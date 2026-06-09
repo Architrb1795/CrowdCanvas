@@ -129,7 +129,8 @@ export default function MediaLightbox({ mediaList, initialIndex, onClose }: Medi
                 quality={100}
               />
             ) : (
-              <img src={currentMedia.file_url} className="max-w-full max-h-full object-contain pointer-events-auto relative z-0" alt="Fullscreen" />
+              /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={currentMedia.file_url} className="max-w-full max-h-full object-contain pointer-events-auto relative z-0" alt="Fullscreen" />
             )}
 
             {currentMedia.media_type === 'photo' && (

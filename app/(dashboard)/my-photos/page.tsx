@@ -54,7 +54,6 @@ export default async function MyPhotosPage() {
     console.error('Error fetching face matches:', error);
   }
 
-  // Group by event
   const eventsMap = new Map();
   const validMatches = (matches || []).filter(m => m.media && m.media.events);
 
@@ -67,23 +66,35 @@ export default async function MyPhotosPage() {
         id: event.id,
         name: event.name,
         date: event.event_date,
-        photos: []
+        photosMap: new Map() // Use map to deduplicate by media_id
       });
     }
     
-    eventsMap.get(event.id).photos.push({
-      id: match.media.id,
-      matchId: match.id,
-      url: match.media.file_url,
-      thumbnailUrl: match.media.thumbnail_url,
-      type: match.media.media_type,
-      similarity: match.similarity_score,
-      status: match.status,
-      createdAt: match.media.created_at
-    });
+    const eventData = eventsMap.get(event.id);
+    const mediaId = match.media.id;
+    
+    // Only keep the highest similarity match for a given media file
+    if (!eventData.photosMap.has(mediaId) || eventData.photosMap.get(mediaId).similarity < match.similarity_score) {
+      eventData.photosMap.set(mediaId, {
+        id: mediaId,
+        matchId: match.id,
+        url: match.media.file_url,
+        thumbnailUrl: match.media.thumbnail_url,
+        type: match.media.media_type,
+        similarity: match.similarity_score,
+        status: match.status,
+        createdAt: match.media.created_at
+      });
+    }
   }
 
-  const groupedEvents = Array.from(eventsMap.values());
+  const groupedEvents = Array.from(eventsMap.values()).map(event => ({
+    id: event.id,
+    name: event.name,
+    date: event.date,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    photos: Array.from(event.photosMap.values()) as any[]
+  }));
 
   return (
     <main className="min-h-screen pt-24 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">

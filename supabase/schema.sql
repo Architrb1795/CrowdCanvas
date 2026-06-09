@@ -503,39 +503,55 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION match_faces(
+CREATE OR REPLACE FUNCTION match_faces (
   query_embedding vector(128),
   match_threshold float,
   match_count int
-) RETURNS TABLE (
+)
+RETURNS TABLE (
   media_face_id uuid,
   media_id uuid,
   similarity float
-) LANGUAGE plpgsql AS $$
+)
+LANGUAGE plpgsql
+AS $$
 BEGIN
-  RETURN QUERY SELECT
-    mf.id AS media_face_id, mf.media_id,
-    1 - (mf.embedding <=> query_embedding) AS similarity
+  RETURN QUERY
+  SELECT
+    mf.id as media_face_id,
+    mf.media_id,
+    -- face-api.js uses Euclidean distance. A distance of 0.0 is exact match, 0.5 is max threshold.
+    -- We map distance 0.0 -> 1.0, and 0.5 -> 0.70 using a linear curve for strict distribution
+    (1.0 - ((mf.embedding <-> query_embedding) / 0.5) * 0.3)::float as similarity
   FROM media_faces mf
-  WHERE 1 - (mf.embedding <=> query_embedding) > match_threshold
-  ORDER BY mf.embedding <=> query_embedding LIMIT match_count;
+  -- Filter by the threshold strictly
+  WHERE (mf.embedding <-> query_embedding) <= 0.5
+    AND (1.0 - ((mf.embedding <-> query_embedding) / 0.5) * 0.3) >= match_threshold
+  ORDER BY mf.embedding <-> query_embedding
+  LIMIT match_count;
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION match_media_to_profiles(
+-- Match profiles against a newly uploaded media face using Euclidean distance
+CREATE OR REPLACE FUNCTION match_media_to_profiles (
   query_embedding vector(128),
   match_threshold float
-) RETURNS TABLE (
+)
+RETURNS TABLE (
   profile_id uuid,
   similarity float
-) LANGUAGE plpgsql AS $$
+)
+LANGUAGE plpgsql
+AS $$
 BEGIN
-  RETURN QUERY SELECT
-    fp.id AS profile_id,
-    1 - (fp.embedding <=> query_embedding) AS similarity
+  RETURN QUERY
+  SELECT
+    fp.id as profile_id,
+    (1.0 - POWER((fp.embedding <-> query_embedding) / 0.6, 2) * 0.3)::float as similarity
   FROM face_profiles fp
-  WHERE 1 - (fp.embedding <=> query_embedding) > match_threshold
-  ORDER BY fp.embedding <=> query_embedding;
+  WHERE (fp.embedding <-> query_embedding) <= 0.6
+    AND (1.0 - POWER((fp.embedding <-> query_embedding) / 0.6, 2) * 0.3) >= match_threshold
+  ORDER BY fp.embedding <-> query_embedding;
 END;
 $$;
 
@@ -723,3 +739,59 @@ ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
 -- ==========================================
 -- END OF UNIFIED SCHEMA
 -- ==========================================
+
+-- ==========================================
+-- FACE RECOGNITION MATCHING FUNCTIONS (EUCLIDEAN DISTANCE)
+-- ==========================================
+
+CREATE OR REPLACE FUNCTION match_faces (
+  query_embedding vector(128),
+  match_threshold float,
+  match_count int
+)
+RETURNS TABLE (
+  media_face_id uuid,
+  media_id uuid,
+  similarity float
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    mf.id as media_face_id,
+    mf.media_id,
+    -- face-api.js uses Euclidean distance. A distance of 0.0 is exact match, 0.5 is max threshold.
+    -- We map distance 0.0 -> 1.0, and 0.5 -> 0.70 using a linear curve for strict distribution
+    (1.0 - ((mf.embedding <-> query_embedding) / 0.5) * 0.3)::float as similarity
+  FROM media_faces mf
+  -- Filter by the threshold strictly
+  WHERE (mf.embedding <-> query_embedding) <= 0.65
+    AND (1.0 - ((mf.embedding <-> query_embedding) / 0.65) * 0.4) >= match_threshold
+  ORDER BY mf.embedding <-> query_embedding
+  LIMIT match_count;
+END;
+$$;
+
+-- Match profiles against a newly uploaded media face using Euclidean distance
+CREATE OR REPLACE FUNCTION match_media_to_profiles (
+  query_embedding vector(128),
+  match_threshold float
+)
+RETURNS TABLE (
+  profile_id uuid,
+  similarity float
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    fp.id as profile_id,
+    (1.0 - ((fp.embedding <-> query_embedding) / 0.65) * 0.4)::float as similarity
+  FROM face_profiles fp
+  WHERE (fp.embedding <-> query_embedding) <= 0.65
+    AND (1.0 - ((fp.embedding <-> query_embedding) / 0.65) * 0.4) >= match_threshold
+  ORDER BY fp.embedding <-> query_embedding;
+END;
+$$;

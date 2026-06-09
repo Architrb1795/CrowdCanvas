@@ -12,8 +12,18 @@ export async function initFaceApi() {
   if (modelsLoaded && faceapi) return;
   
   if (!faceapi) {
-    // Dynamically import to avoid Next.js static build evaluation crashes (TextEncoder is not a constructor)
-    faceapi = await import('@vladmandic/face-api');
+    if (typeof global.TextEncoder === 'undefined') {
+      const { TextEncoder, TextDecoder } = await import('util');
+      global.TextEncoder = TextEncoder;
+      global.TextDecoder = TextDecoder as any;
+    }
+
+    await import('@tensorflow/tfjs');
+    await import('@tensorflow/tfjs-backend-wasm');
+    
+    // Dynamically import to avoid Next.js static build evaluation crashes
+    // Dynamically import to avoid Next.js static build evaluation crashes
+    faceapi = (await import('@vladmandic/face-api/dist/face-api.node-wasm.js')).default || await import('@vladmandic/face-api/dist/face-api.node-wasm.js');
     canvasModule = await import('canvas');
     
     // Monkey patch nodejs environment
@@ -22,6 +32,9 @@ export async function initFaceApi() {
       Image: canvasModule.Image as any, 
       ImageData: canvasModule.ImageData as any 
     });
+
+    await faceapi.tf.setBackend('wasm');
+    await faceapi.tf.ready();
   }
 
   const modelsPath = path.join(process.cwd(), 'public', 'models');
@@ -58,8 +71,9 @@ export async function processImageForFaces(imageUrl: string) {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0, 0);
     
-    // Detect all faces
-    const detections = await faceapi.detectAllFaces(canvas as any)
+    // Detect all faces with a lowered confidence threshold to catch smaller/obscured faces in crowds
+    const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.35 });
+    const detections = await faceapi.detectAllFaces(canvas as any, options)
       .withFaceLandmarks()
       .withFaceDescriptors();
       

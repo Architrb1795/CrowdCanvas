@@ -161,7 +161,7 @@ export function calculateCompositeScore(
                 const candVec = typeof candidateMedia.embedding === 'string' ? JSON.parse(candidateMedia.embedding) : candidateMedia.embedding;
                 const userVec = typeof userProfile.interest_embedding === 'string' ? JSON.parse(userProfile.interest_embedding) : userProfile.interest_embedding;
                 pVectorScore = calculateCosineSimilarity(userVec as number[], candVec as number[]);
-            } catch (e) {
+            } catch {
                 // Ignore parse errors
             }
         }

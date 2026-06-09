@@ -3,9 +3,18 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { ScanFace, Trash2, Camera, ShieldCheck, CheckCircle2, RefreshCw } from 'lucide-react';
-import { SelfieCapture } from './SelfieCapture';
-import { createFaceProfile, deleteFaceProfile, getFaceStats } from '@/lib/actions/faces';
+import { ScanFace, Trash2, Camera, ShieldCheck, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const SelfieCapture = dynamic(
+  () => import('./SelfieCapture').then((mod) => mod.SelfieCapture),
+  { 
+    ssr: false,
+    loading: () => <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+  }
+);
+import { createFaceProfile, deleteFaceProfile, getFaceStats, scanHistoricalFaces } from '@/lib/actions/faces';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface FaceProfile {
   id: string;
@@ -24,6 +33,7 @@ export function FaceRecognitionHub({ initialProfile }: FaceRecognitionHubProps) 
   const [isProcessing, setIsProcessing] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const loadStats = async () => {
     const data = await getFaceStats();
@@ -36,6 +46,18 @@ export function FaceRecognitionHub({ initialProfile }: FaceRecognitionHubProps) 
       loadStats();
     }
   }, [profile]);
+
+  const handleRefresh = async () => {
+    setIsProcessing(true);
+    setError(null);
+    const result = await scanHistoricalFaces();
+    if (result.success) {
+      await loadStats();
+    } else {
+      setError(result.error || 'Failed to refresh matches');
+    }
+    setIsProcessing(false);
+  };
 
   const handleCapture = async (embedding: number[]) => {
     setIsProcessing(true);
@@ -55,11 +77,10 @@ export function FaceRecognitionHub({ initialProfile }: FaceRecognitionHubProps) 
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete your face profile? This will remove all your personalized photo matches. Your historical photos will remain in the events, but you will no longer be tagged in them.')) return;
-    
     setIsProcessing(true);
     const result = await deleteFaceProfile();
     setIsProcessing(false);
+    setIsDeleteDialogOpen(false);
     
     if (result.success) {
       setProfile(null);
@@ -118,8 +139,8 @@ export function FaceRecognitionHub({ initialProfile }: FaceRecognitionHubProps) 
             Privacy & Consent
           </h4>
           <ul className="text-sm text-slate-400 space-y-2 list-disc list-inside">
-            <li>Your raw selfie is <strong>never</strong> uploaded to our servers.</li>
-            <li>We securely extract a mathematical representation (128 points) directly in your browser.</li>
+            <li>Your selfie is securely processed on our servers to guarantee the highest matching accuracy across the dataset.</li>
+            <li>We extract a mathematical representation (128 points) and immediately discard the photo.</li>
             <li>This mathematical profile is used solely to match you with event photos.</li>
             <li>You can delete your profile and all associated data at any time.</li>
           </ul>
@@ -167,10 +188,11 @@ export function FaceRecognitionHub({ initialProfile }: FaceRecognitionHubProps) 
           <p className="text-sm text-slate-400 mt-1">Your facial profile is actively scanning event media.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={loadStats} disabled={isProcessing}>
-            <RefreshCw className={`w-4 h-4 ${isProcessing ? 'animate-spin' : ''}`} />
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isProcessing}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${isProcessing ? 'animate-spin' : ''}`} />
+            Rescan
           </Button>
-          <Button variant="outline" className="text-red-400 border-red-500/30 hover:bg-red-500/10" size="sm" onClick={handleDelete} disabled={isProcessing}>
+          <Button variant="outline" className="text-red-400 border-red-500/30 hover:bg-red-500/10" size="sm" onClick={() => setIsDeleteDialogOpen(true)} disabled={isProcessing}>
             <Trash2 className="w-4 h-4 mr-2" />
             Delete Profile
           </Button>
@@ -211,6 +233,17 @@ export function FaceRecognitionHub({ initialProfile }: FaceRecognitionHubProps) 
           </Button>
         </div>
       )}
+
+      <ConfirmDialog 
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete Face Profile"
+        description="Are you sure you want to delete your face profile? This will remove all your personalized photo matches. Your historical photos will remain in the events, but you will no longer be tagged in them."
+        confirmText="Delete Profile"
+        isDestructive={true}
+        isLoading={isProcessing}
+      />
     </Card>
   );
 }

@@ -29,6 +29,7 @@ export async function POST(request: Request) {
   else if (/Edge/i.test(userAgent)) browser = 'Edge';
 
   // Check if this is the first login
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { count } = await (supabase as any).from('user_sessions')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id);

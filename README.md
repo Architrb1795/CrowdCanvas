@@ -171,7 +171,7 @@ Handled via Supabase Auth. It supports magic links, secure session cookies (via 
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/Architrb1795/NSS-donation-websitee.git
+git clone https://github.com/Architrb1795/CrowdCanvas.git
 cd CrowdCanvas
 ```
 
